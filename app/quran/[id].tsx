@@ -14,6 +14,7 @@ export default function SurahDetailScreen() {
   const { colorScheme } = useColorScheme();
   const flatListRef = useRef<FlatList>(null);
   const isAutoPlayingRef = useRef(false);
+  const isScrollingRef = useRef(false);
   const [surah, setSurah] = useState<SurahDetail | null>(null);
   const [translations, setTranslations] = useState<Translation[]>([]);
   const [tafsirs, setTafsirs] = useState<Tafsir[]>([]);
@@ -68,13 +69,21 @@ export default function SurahDetailScreen() {
   };
 
   const scrollToAyah = (ayahNumber: number) => {
+    if (isScrollingRef.current) return;
+    
     const index = surah?.ayahs.findIndex((a) => a.numberInSurah === ayahNumber);
     if (index !== undefined && index >= 0 && flatListRef.current) {
-      flatListRef.current.scrollToIndex({
-        index,
-        animated: true,
-        viewPosition: 0.2,
-      });
+      isScrollingRef.current = true;
+      setTimeout(() => {
+        flatListRef.current?.scrollToIndex({
+          index,
+          animated: true,
+          viewPosition: 0.2,
+        });
+        setTimeout(() => {
+          isScrollingRef.current = false;
+        }, 1000);
+      }, 100);
     }
   };
 
@@ -121,7 +130,9 @@ export default function SurahDetailScreen() {
         isAutoPlayingRef.current = true;
       }
 
-      scrollToAyah(ayahNumber);
+      if (!isScrollingRef.current) {
+        scrollToAyah(ayahNumber);
+      }
 
       const { sound: newSound } = await Audio.Sound.createAsync(
         { uri: ayah.audio },
@@ -319,6 +330,7 @@ export default function SurahDetailScreen() {
         initialNumToRender={10}
         maxToRenderPerBatch={10}
         windowSize={10}
+        removeClippedSubviews={false}
         onScrollToIndexFailed={(info) => {
           const wait = new Promise(resolve => setTimeout(resolve, 500));
           wait.then(() => {
