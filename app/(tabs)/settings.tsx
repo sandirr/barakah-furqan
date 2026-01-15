@@ -17,7 +17,7 @@ export default function SettingsScreen() {
   return (
     <ScrollView className="flex-1 bg-white dark:bg-gray-900">
       {/* Header */}
-      <View className="px-6 pt-16 pb-6">
+      <View className="px-4 pt-16 pb-6">
         <Text className="text-3xl font-bold text-gray-900 dark:text-white">
           {t('settings.title')}
         </Text>
@@ -27,7 +27,7 @@ export default function SettingsScreen() {
       </View>
 
       {/* Settings Sections */}
-      <View className="px-6 pb-6">
+      <View className="px-4 pb-6">
         {/* Appearance Section */}
         <View className="mb-6">
           <Text className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase mb-3">

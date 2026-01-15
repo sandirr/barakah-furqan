@@ -42,7 +42,7 @@ export default function HomeScreen() {
 
   return (
     <ScrollView className="flex-1 bg-white dark:bg-gray-900">
-      <View className="px-6 pt-16 pb-6">
+      <View className="px-4 pt-16 pb-6">
         <View className="items-center mb-8">
           <View className="w-20 h-20 bg-emerald-600 dark:bg-emerald-700 rounded-full items-center justify-center mb-4 shadow-lg">
             <IconSymbol size={40} name="book" color="#FFFFFF" />

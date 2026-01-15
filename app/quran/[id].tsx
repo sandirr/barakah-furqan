@@ -79,8 +79,10 @@ export default function SurahDetailScreen() {
   };
 
   const handleAyahSelection = (ayahNumber: number) => {
-    scrollToAyah(ayahNumber);
     setShowAyahPicker(false);
+    setTimeout(() => {
+      scrollToAyah(ayahNumber);
+    }, 300);
   };
 
   const playNextAyah = async (currentAyahNumber: number) => {
@@ -226,7 +228,7 @@ export default function SurahDetailScreen() {
     const sizes = getFontSize();
 
     return (
-      <View className={`mb-6 ${isPlaying ? 'bg-emerald-50 dark:bg-emerald-950' : ''} rounded-2xl p-4`}>
+      <View className={`mb-6 ${isPlaying ? 'bg-emerald-50 dark:bg-emerald-950' : ''} !rounded-xl !overflow-hidden p-2`}>
         <View className="flex-row items-center mb-3">
           <View className="w-8 h-8 bg-emerald-600 dark:bg-emerald-700 rounded-full items-center justify-center">
             <Text className="text-white font-bold text-xs">{item.numberInSurah}</Text>
@@ -249,7 +251,7 @@ export default function SurahDetailScreen() {
         </View>
 
         <Text 
-          className="text-right text-gray-900 dark:text-white mb-4 leading-loose"
+          className="text-right text-gray-900 dark:text-white mb-4 leading-loose font-bold"
           style={{ fontSize: sizes.arabic }}
         >
           {item.text}
@@ -310,14 +312,22 @@ export default function SurahDetailScreen() {
         renderItem={renderVerse}
         keyExtractor={(item) => item.number.toString()}
         ListHeaderComponent={renderHeader}
-        contentContainerStyle={{ padding: 24, paddingTop: 16, paddingBottom: 120 }}
+        contentContainerStyle={{ padding: 16, paddingTop: 16, paddingBottom: 120 }}
         showsVerticalScrollIndicator={false}
         onScroll={handleScroll}
         scrollEventThrottle={16}
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        windowSize={10}
         onScrollToIndexFailed={(info) => {
-          setTimeout(() => {
-            flatListRef.current?.scrollToIndex({ index: info.index, animated: true });
-          }, 100);
+          const wait = new Promise(resolve => setTimeout(resolve, 500));
+          wait.then(() => {
+            flatListRef.current?.scrollToIndex({ 
+              index: info.index, 
+              animated: true,
+              viewPosition: 0.2 
+            });
+          });
         }}
       />
 
@@ -427,7 +437,7 @@ export default function SurahDetailScreen() {
               </View>
             </View>
             <ScrollView className="p-4">
-              <View className="flex-row flex-wrap gap-2">
+              <View className="flex-row flex-wrap gap-2 pb-6">
                 {Array.from({ length: surah.numberOfAyahs }, (_, i) => i + 1).map((num) => (
                   <TouchableOpacity
                     key={num}

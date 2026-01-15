@@ -115,7 +115,7 @@ export default function QuranListScreen() {
 
   return (
     <View className="flex-1 bg-white dark:bg-gray-900">
-      <View className="px-6 pt-16 pb-4 bg-emerald-600 dark:bg-emerald-700">
+      <View className="px-4 pt-16 pb-4 bg-emerald-600 dark:bg-emerald-700">
         <View className="flex-row items-center mb-4">
           <TouchableOpacity onPress={() => router.back()} className="mr-3">
             <IconSymbol size={24} name="arrow-back" color="#FFFFFF" />
@@ -149,7 +149,7 @@ export default function QuranListScreen() {
         data={filteredSurahs}
         renderItem={renderSurah}
         keyExtractor={(item) => item.number.toString()}
-        contentContainerStyle={{ padding: 24, paddingTop: 16 }}
+        contentContainerStyle={{ padding: 16 }}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={renderEmptyList}
       />
