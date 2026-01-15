@@ -1,0 +1,57 @@
+{
+  "common": {
+    "welcome": "Selamat Datang",
+    "hello": "Halo {{name}}",
+    "loading": "Memuat...",
+    "save": "Simpan",
+    "cancel": "Batal",
+    "confirm": "Konfirmasi",
+    "success": "Berhasil",
+    "error": "Kesalahan"
+  },
+  "navigation": {
+    "home": "Beranda",
+    "settings": "Pengaturan"
+  },
+  "home": {
+    "title": "Beranda",
+    "greeting": "Assalamu'alaikum",
+    "description": "Semoga damai dan berkah selalu menyertai Anda",
+    "quran": "Al-Quran",
+    "quranDescription": "Baca dan pelajari Al-Quran",
+    "kiblat": "Arah Kiblat",
+    "kiblatDescription": "Temukan arah ke Kabah",
+    "shalat": "Waktu Shalat",
+    "shalatDescription": "Lihat jadwal shalat harian",
+    "dailyReminder": "Pengingat Harian",
+    "dailyReminderText": "Ingatlah Allah dalam setiap langkah harimu. Jaga shalatmu dan mohon petunjuk-Nya dalam segala urusan."
+  },
+  "quran": {
+    "title": "Al-Quran",
+    "description": "Bacalah Al-Quran dengan penuh tadabbur",
+    "verses": "Ayat",
+    "verse": "Ayat",
+    "notFound": "Surah tidak ditemukan",
+    "tafsir": "Tafsir",
+    "translation": "Terjemahan",
+    "stop": "Stop",
+    "toTop": "Ke Atas",
+    "playing": "Memutar ayat",
+    "searchPlaceholder": "Cari surah...",
+    "noResults": "Tidak ada hasil",
+    "tryDifferentSearch": "Coba kata kunci pencarian lain",
+    "goToAyah": "Pilih Ayat",
+    "selectAyah": "Pilih Ayat"
+  },
+  "settings": {
+    "title": "Pengaturan",
+    "description": "Sesuaikan pengalaman aplikasi Anda",
+    "appearance": "Tampilan",
+    "language": "Bahasa",
+    "about": "Tentang",
+    "darkMode": "Mode Gelap",
+    "darkModeOn": "Tema gelap diaktifkan",
+    "darkModeOff": "Tema terang diaktifkan",
+    "version": "Versi"
+  }
+}

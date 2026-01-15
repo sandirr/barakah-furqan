@@ -1,98 +1,109 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { LinearGradient } from 'expo-linear-gradient';
+import { router } from 'expo-router';
+import React from 'react';
+import { useTranslation } from 'react-i18next';
+import { ScrollView, Text, TouchableOpacity, useColorScheme, View } from 'react-native';
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const { t } = useTranslation();
+  const colorScheme = useColorScheme();
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  const menuItems = [
+    {
+      id: 'quran',
+      title: t('home.quran'),
+      icon: 'book',
+      color: 'bg-emerald-500',
+      darkColor: 'dark:bg-emerald-600',
+      route: '/quran',
+    },
+    {
+      id: 'kiblat',
+      title: t('home.kiblat'),
+      icon: 'explore',
+      color: 'bg-teal-500',
+      darkColor: 'dark:bg-teal-600',
+      route: '/kiblat',
+    },
+    {
+      id: 'shalat',
+      title: t('home.shalat'),
+      icon: 'schedule',
+      color: 'bg-green-500',
+      darkColor: 'dark:bg-green-600',
+      route: '/shalat',
+    },
+  ];
+
+  const handleMenuPress = (route: string) => {
+    router.push(route as any);
+  };
+
+  return (
+    <ScrollView className="flex-1 bg-white dark:bg-gray-900">
+      <View className="px-6 pt-16 pb-6">
+        <View className="items-center mb-8">
+          <View className="w-20 h-20 bg-emerald-600 dark:bg-emerald-700 rounded-full items-center justify-center mb-4 shadow-lg">
+            <IconSymbol size={40} name="book" color="#FFFFFF" />
+          </View>
+          <Text className="text-3xl font-bold text-gray-900 dark:text-white">
+            Barakah Furqan
+          </Text>
+        </View>
+
+        <View className="bg-emerald-600 dark:bg-emerald-700 rounded-3xl p-6 mb-8 shadow-lg">
+          <Text className="text-white text-2xl font-bold mb-2">
+            {t('home.greeting')}
+          </Text>
+          <Text className="text-emerald-50 text-base">
+            {t('home.description')}
+          </Text>
+        </View>
+
+        <View className="gap-y-4">
+          {menuItems.map((item) => (
+            <TouchableOpacity
+              key={item.id}
+              onPress={() => handleMenuPress(item.route)}
+              activeOpacity={0.7}
+              className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-md border border-gray-100 dark:border-gray-700"
+            >
+              <View className="flex-row items-center">
+                <View className={`w-14 h-14 ${item.color} ${item.darkColor} rounded-2xl items-center justify-center mr-4 shadow-sm`}>
+                  <IconSymbol size={28} name={item.icon} color="#FFFFFF" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-xl font-bold text-gray-900 dark:text-white">
+                    {item.title}
+                  </Text>
+                  <Text className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    {t(`home.${item.id}Description`)}
+                  </Text>
+                </View>
+                <IconSymbol size={24} name="chevron-right" color="#9CA3AF" />
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <LinearGradient
+          colors={colorScheme === 'dark' ? ['#1f2937', '#374151'] : ['#d1fae5', '#ccfbf1']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={{ borderRadius: 16, padding: 24, marginTop: 32 }}
+        >
+          <View className="flex-row items-center mb-3">
+            <IconSymbol size={24} name="info" color="#059669" />
+            <Text className="text-lg font-semibold text-gray-900 dark:text-white ml-2">
+              {t('home.dailyReminder')}
+            </Text>
+          </View>
+          <Text className="text-gray-700 dark:text-gray-300 leading-6">
+            {t('home.dailyReminderText')}
+          </Text>
+        </LinearGradient>
+      </View>
+    </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
-});

@@ -1,0 +1,32 @@
+{
+  "common": {
+    "welcome": "Welcome",
+    "hello": "Hello {{name}}",
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "success": "Success",
+    "error": "Error"
+  },
+  "navigation": {
+    "home": "Home",
+    "settings": "Settings"
+  },
+  "home": {
+    "title": "Home",
+    "greeting": "As-salamu alaikum",
+    "description": "Welcome to Barakah Furqan"
+  },
+  "settings": {
+    "title": "Settings",
+    "description": "Customize your app experience",
+    "appearance": "Appearance",
+    "language": "Language",
+    "about": "About",
+    "darkMode": "Dark Mode",
+    "darkModeOn": "Dark theme enabled",
+    "darkModeOff": "Light theme enabled",
+    "version": "Version"
+  }
+}
