@@ -28,6 +28,8 @@ export default function RootLayout() {
         <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
         <Stack.Screen name="quran/index" options={{ headerShown: false }} />
         <Stack.Screen name="quran/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="kiblat" options={{ headerShown: false }} />
+        <Stack.Screen name="shalat" options={{ headerShown: false }} />
       </Stack>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
     </ThemeProvider>

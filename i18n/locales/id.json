@@ -11,7 +11,8 @@
   },
   "navigation": {
     "home": "Beranda",
-    "settings": "Pengaturan"
+    "settings": "Pengaturan",
+    "quranPractice": "Latihan Quran"
   },
   "home": {
     "title": "Beranda",
@@ -53,5 +54,38 @@
     "darkModeOn": "Tema gelap diaktifkan",
     "darkModeOff": "Tema terang diaktifkan",
     "version": "Versi"
+  },
+  "kiblat": {
+    "title": "Arah Kiblat",
+    "description": "Temukan arah yang tepat menuju Kabah",
+    "qiblaDirection": "Arah Kiblat",
+    "fromNorth": "dari Utara",
+    "distanceKm": "Jarak (km)",
+    "permissionDenied": "Izin lokasi ditolak",
+    "locationError": "Gagal mendapatkan lokasi",
+    "errorDescription": "Aplikasi memerlukan izin lokasi dan sensor kompas untuk menampilkan arah kiblat",
+    "calibrating": "Mengkalibrasi kompas... Gerakkan perangkat membentuk angka 8",
+    "howToUse": "Cara Menggunakan",
+    "instruction": "Arahkan perangkat Anda mengikuti ikon masjid (hijau) pada kompas. Putar perangkat hingga ikon masjid berada pada posisi yang stabil dan sejajar dengan arah mata angin yang ditampilkan di card atas.",
+    "currentDirection": "Arah Kiblat dari lokasi Anda"
+  },
+  "shalat": {
+    "title": "Waktu Shalat",
+    "nextPrayer": "Shalat Selanjutnya",
+    "todaySchedule": "Jadwal Hari Ini",
+    "settings": "Pengaturan",
+    "notification": "Notifikasi",
+    "notificationDesc": "Ingatkan saya saat waktu shalat tiba",
+    "adhan": "Suara Adzan",
+    "adhanDesc": "Putar adzan saat notifikasi",
+    "testAdhan": "Tes Suara Adzan",
+    "permissionDenied": "Izin lokasi ditolak",
+    "loadError": "Gagal memuat waktu shalat",
+    "retry": "Coba Lagi",
+    "fajr": "Subuh",
+    "dhuhr": "Dzuhur",
+    "asr": "Ashar",
+    "maghrib": "Maghrib",
+    "isha": "Isya"
   }
 }
