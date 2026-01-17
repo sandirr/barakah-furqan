@@ -28,6 +28,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="quran-practice"
         options={{
+          href: null,
           title: t('navigation.quranPractice'),
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="mic" color={color} />,
         }}

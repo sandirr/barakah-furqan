@@ -58,7 +58,7 @@ class NotificationService {
     try {
       const [hours, minutes] = prayerTime.split(':').map(Number);
 
-      await Notifications.scheduleNotificationAsync({
+      const notificationId = await Notifications.scheduleNotificationAsync({
         content: {
           title: `Waktu ${prayerName}`,
           body: `Saatnya menunaikan shalat ${prayerName}`,
@@ -72,9 +72,40 @@ class NotificationService {
         },
         identifier,
       });
+
+      // console.log(`Scheduled ${prayerName} notification at ${prayerTime} with ID: ${notificationId}`);
     } catch (error) {
       console.error(`Failed to schedule ${prayerName} notification:`, error);
     }
+  }
+
+  async testNotification(): Promise<void> {
+    try {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: 'Test Notifikasi',
+          body: 'Notifikasi berfungsi dengan baik! ✅',
+          data: { test: true },
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+          seconds: 2,
+        },
+      });
+      console.log('Test notification scheduled in 2 seconds');
+    } catch (error) {
+      console.error('Failed to schedule test notification:', error);
+      throw error;
+    }
+  }
+
+  async getScheduledNotifications(): Promise<Notifications.NotificationRequest[]> {
+    const notifications = await Notifications.getAllScheduledNotificationsAsync();
+    // console.log('Scheduled notifications:', notifications.length);
+    notifications.forEach(notif => {
+      console.log(`- ${notif.identifier}:`, notif.trigger);
+    });
+    return notifications;
   }
 
   async cancelAllNotifications(): Promise<void> {

@@ -311,7 +311,7 @@ export default function KiblatScreen() {
             style={{
               position: 'absolute',
               transform: [
-                { rotate: `${getQiblaAngle()}deg` },
+                { rotate: `${qiblaDirection}deg` },
               ],
             }}
           >

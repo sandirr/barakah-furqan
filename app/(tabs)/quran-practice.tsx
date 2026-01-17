@@ -3,46 +3,40 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Audio } from 'expo-av';
 import * as FileSystem from 'expo-file-system/legacy';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { initWhisper, WhisperContext } from 'whisper.rn';
 
 interface Word {
   text: string;
-  highlighted: boolean;
-  spoken: boolean;
+  status: 'pending' | 'correct' | 'incorrect' | 'current';
 }
 
 const MODEL_URL = 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin';
 const MODEL_SIZE_MB = 148;
 const MODEL_NAME = 'ggml-base.bin';
+const RECORDING_INTERVAL = 3000; // 3 seconds per word
 
 export default function QuranPracticeScreen() {
   const { colorScheme } = useColorScheme();
   const [inputText, setInputText] = useState('');
   const [words, setWords] = useState<Word[]>([]);
-  const [isListening, setIsListening] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
   const [isInitializing, setIsInitializing] = useState(false);
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
-  const [transcript, setTranscript] = useState('');
   const [progress, setProgress] = useState(0);
   const [whisperContext, setWhisperContext] = useState<WhisperContext | null>(null);
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
-  const [logs, setLogs] = useState<string[]>([]);
+  const [sessionComplete, setSessionComplete] = useState(false);
+  const [score, setScore] = useState({ correct: 0, total: 0 });
   
   const [modelDownloaded, setModelDownloaded] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [checkingModel, setCheckingModel] = useState(true);
 
+  const recordingTimer = useRef<NodeJS.Timeout | any>(null);
   const modelPath = `${FileSystem.documentDirectory}${MODEL_NAME}`;
-
-  const addLog = (message: string) => {
-    const timestamp = new Date().toLocaleTimeString();
-    const logMessage = `[${timestamp}] ${message}`;
-    console.log(logMessage);
-    setLogs(prev => [...prev.slice(-4), logMessage]);
-  };
 
   useEffect(() => {
     checkModelExists();
@@ -54,6 +48,9 @@ export default function QuranPracticeScreen() {
       if (whisperContext) {
         whisperContext.release().catch(() => {});
       }
+      if (recordingTimer.current) {
+        clearTimeout(recordingTimer.current);
+      }
     };
   }, []);
 
@@ -61,14 +58,8 @@ export default function QuranPracticeScreen() {
     try {
       const fileInfo = await FileSystem.getInfoAsync(modelPath);
       setModelDownloaded(fileInfo.exists);
-      if (fileInfo.exists && fileInfo.size) {
-        const sizeMB = (fileInfo.size / 1024 / 1024).toFixed(1);
-        addLog(`✅ Model sudah ada (${sizeMB}MB)`);
-      } else {
-        addLog('⚠️ Model belum diunduh');
-      }
     } catch (error) {
-      addLog(`❌ Error cek model: ${error}`);
+      console.error('Error checking model:', error);
     } finally {
       setCheckingModel(false);
     }
@@ -76,22 +67,17 @@ export default function QuranPracticeScreen() {
 
   const setupAudio = async () => {
     try {
-      addLog('Meminta izin audio...');
       const { status } = await Audio.requestPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('Error', 'Izin mikrofon diperlukan');
-        addLog('❌ Izin mikrofon ditolak');
         return;
       }
-      addLog('✅ Izin mikrofon diberikan');
       
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
       });
-      addLog('✅ Audio mode diatur');
     } catch (error) {
-      addLog(`❌ Error setup audio: ${error}`);
       console.error('Error setting up audio:', error);
     }
   };
@@ -99,27 +85,11 @@ export default function QuranPracticeScreen() {
   const downloadModel = async () => {
     setIsDownloading(true);
     setDownloadProgress(0);
-    addLog('=== MEMULAI DOWNLOAD MODEL ===');
 
     try {
-      const cacheDir = FileSystem.documentDirectory;
-      if (!cacheDir) {
-        throw new Error('Document directory tidak tersedia');
-      }
-
-      addLog(`Downloading dari: ${MODEL_URL}`);
-      addLog(`Menyimpan ke: ${modelPath}`);
-
       const callback = (downloadProgress: FileSystem.DownloadProgressData) => {
         const progress = downloadProgress.totalBytesWritten / downloadProgress.totalBytesExpectedToWrite;
-        const progressPercent = Math.round(progress * 100);
-        setDownloadProgress(progressPercent);
-        
-        if (progressPercent % 10 === 0) {
-          const downloadedMB = (downloadProgress.totalBytesWritten / 1024 / 1024).toFixed(1);
-          const totalMB = (downloadProgress.totalBytesExpectedToWrite / 1024 / 1024).toFixed(1);
-          addLog(`Download: ${downloadedMB}MB / ${totalMB}MB (${progressPercent}%)`);
-        }
+        setDownloadProgress(Math.round(progress * 100));
       };
 
       const downloadResumable = FileSystem.createDownloadResumable(
@@ -132,12 +102,10 @@ export default function QuranPracticeScreen() {
       const result = await downloadResumable.downloadAsync();
       
       if (result && result.uri) {
-        addLog('✅ Model berhasil diunduh');
         setModelDownloaded(true);
         Alert.alert('Berhasil', 'Fitur latihan baca Quran siap digunakan!');
       }
     } catch (error) {
-      addLog(`❌ Error download: ${error}`);
       Alert.alert('Error', 'Gagal mengunduh model. Coba lagi nanti.');
       console.error('Download error:', error);
     } finally {
@@ -163,10 +131,8 @@ export default function QuranPracticeScreen() {
                 await whisperContext.release();
                 setWhisperContext(null);
               }
-              addLog('✅ Model dihapus');
               Alert.alert('Berhasil', 'Model berhasil dihapus');
             } catch (error) {
-              addLog(`❌ Error hapus model: ${error}`);
               Alert.alert('Error', 'Gagal menghapus model');
             }
           },
@@ -176,40 +142,25 @@ export default function QuranPracticeScreen() {
   };
 
   const initializeWhisper = async () => {
-    if (whisperContext) {
-      addLog('Whisper sudah diinisialisasi');
-      return;
-    }
-
+    if (whisperContext) return;
     if (!modelDownloaded) {
       Alert.alert('Error', 'Model belum diunduh. Silakan unduh fitur terlebih dahulu.');
       return;
     }
 
     setIsInitializing(true);
-    addLog('Memulai inisialisasi Whisper...');
-    addLog(`Model path: ${modelPath}`);
-    addLog(`Platform: ${Platform.OS}`);
 
     try {
-      addLog('Loading model...');
-      
       const context = await initWhisper({
         filePath: modelPath,
       });
       
       setWhisperContext(context);
-      addLog('✅ Whisper berhasil diinisialisasi');
     } catch (error) {
-      addLog(`❌ Error inisialisasi Whisper: ${error}`);
       console.error('Error initializing Whisper:', error);
       Alert.alert(
         'Error Inisialisasi',
-        'Gagal memuat model AI. Ini bisa terjadi karena:\n\n' +
-        '• Memory device tidak cukup\n' +
-        '• File model corrupt\n' +
-        '• Model tidak kompatibel\n\n' +
-        'Coba hapus dan download ulang model.',
+        'Gagal memuat model AI. Coba hapus dan download ulang model.',
         [
           { text: 'OK' },
           { 
@@ -227,62 +178,45 @@ export default function QuranPracticeScreen() {
   const useSampleText = () => {
     const sampleText = 'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ';
     setInputText(sampleText);
-    addLog('Menggunakan teks contoh Bismillah');
   };
 
-  const startRecording = async () => {
+  const startRecordingForWord = async () => {
     try {
-      addLog('Memulai recording...');
       const { recording: newRecording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY
+        Audio.RecordingOptionsPresets.MINIMUM_BALANCE
       );
       setRecording(newRecording);
-      addLog('✅ Recording dimulai');
-      return newRecording;
+      
+      recordingTimer.current = setTimeout(() => {
+        processCurrentWord();
+      }, RECORDING_INTERVAL);
     } catch (error) {
-      addLog(`❌ Error memulai recording: ${error}`);
       console.error('Failed to start recording:', error);
-      return null;
     }
   };
 
-  const stopRecording = async (rec: Audio.Recording | null) => {
-    if (!rec) {
-      addLog('⚠️ Recording null, skip stop');
-      return null;
+  const stopCurrentRecording = async (): Promise<string | null> => {
+    if (recordingTimer.current) {
+      clearTimeout(recordingTimer.current);
     }
 
-    try {
-      addLog('Menghentikan recording...');
-      const status = await rec.getStatusAsync();
-      
-      if (!status.canRecord) {
-        addLog('⚠️ Recording sudah berhenti');
-        const uri = rec.getURI();
-        return uri;
-      }
+    if (!recording) return null;
 
-      await rec.stopAndUnloadAsync();
-      const uri = rec.getURI();
-      addLog(`✅ Recording selesai: ${uri}`);
+    try {
+      await recording.stopAndUnloadAsync();
+      const uri = recording.getURI();
+      setRecording(null);
       return uri;
     } catch (error) {
-      addLog(`❌ Error menghentikan recording: ${error}`);
       console.error('Failed to stop recording:', error);
       return null;
     }
   };
 
-  const transcribeAudio = async (audioUri: string) => {
-    if (!whisperContext) {
-      addLog('❌ Whisper context belum diinisialisasi');
-      return;
-    }
+  const transcribeAudio = async (audioUri: string): Promise<string> => {
+    if (!whisperContext) return '';
 
     try {
-      addLog('Memulai transkripsi...');
-      
-      const startTime = Date.now();
       const { promise } = whisperContext.transcribe(audioUri, {
         language: 'ar',
         maxLen: 1,
@@ -291,50 +225,69 @@ export default function QuranPracticeScreen() {
       });
 
       const { result } = await promise;
-      const duration = Date.now() - startTime;
-
-      addLog(`Hasil transkripsi (${duration}ms): "${result}"`);
-      setTranscript(result);
-      checkWord(result);
+      return result.trim();
     } catch (error) {
-      addLog(`❌ Error transkripsi: ${error}`);
       console.error('Transcription error:', error);
+      return '';
     }
   };
 
-  const checkWord = (spokenText: string) => {
-    const currentWord = words[currentWordIndex];
-    if (!currentWord || currentWord.spoken) {
-      addLog('Tidak ada kata untuk dicek atau sudah diucapkan');
+  const checkWordMatch = (spokenText: string, expectedWord: string): boolean => {
+    const normalized = spokenText.replace(/\s+/g, ' ').toLowerCase();
+    const expected = expectedWord.toLowerCase();
+    
+    return normalized.includes(expected) || 
+           expected.includes(normalized) ||
+           normalized === expected;
+  };
+
+  const processCurrentWord = async () => {
+    const audioUri = await stopCurrentRecording();
+    
+    if (!audioUri || currentWordIndex >= words.length) {
+      completeSession();
       return;
     }
 
-    const normalized = spokenText.trim().replace(/\s+/g, ' ');
-    addLog(`Mengecek kata: "${currentWord.text}"`);
-    addLog(`Ucapan: "${normalized}"`);
+    const transcript = await transcribeAudio(audioUri);
+    const currentWord = words[currentWordIndex];
+    const isCorrect = checkWordMatch(transcript, currentWord.text);
 
-    if (normalized.includes(currentWord.text) || currentWord.text.includes(normalized)) {
-      addLog(`✅ Kata cocok! "${currentWord.text}"`);
-      const newWords = [...words];
-      newWords[currentWordIndex] = { ...currentWord, highlighted: true, spoken: true };
-      setWords(newWords);
-      
-      const nextIndex = currentWordIndex + 1;
-      setCurrentWordIndex(nextIndex);
-      setProgress(Math.round((nextIndex / words.length) * 100));
+    const newWords = [...words];
+    newWords[currentWordIndex] = {
+      ...currentWord,
+      status: isCorrect ? 'correct' : 'incorrect',
+    };
+    setWords(newWords);
 
-      if (nextIndex >= words.length) {
-        addLog('🎉 Semua kata selesai!');
-        stopListening();
-      } else {
-        addLog(`Lanjut ke kata berikutnya (${nextIndex + 1}/${words.length})`);
-      }
+    if (isCorrect) {
+      setScore(prev => ({ ...prev, correct: prev.correct + 1 }));
+    }
+
+    const nextIndex = currentWordIndex + 1;
+    setCurrentWordIndex(nextIndex);
+    setProgress(Math.round((nextIndex / words.length) * 100));
+
+    if (nextIndex < words.length) {
+      const updated = [...newWords];
+      updated[nextIndex] = { ...updated[nextIndex], status: 'current' };
+      setWords(updated);
+      await startRecordingForWord();
     } else {
-      addLog(`❌ Kata tidak cocok. Coba lagi.`);
+      completeSession();
     }
   };
 
-  const startListening = async () => {
+  const completeSession = async () => {
+    setIsRecording(false);
+    setSessionComplete(true);
+    
+    if (recording) {
+      await stopCurrentRecording();
+    }
+  };
+
+  const startSession = async () => {
     if (!inputText.trim()) {
       Alert.alert('Error', 'Masukkan teks terlebih dahulu');
       return;
@@ -342,82 +295,50 @@ export default function QuranPracticeScreen() {
 
     if (!whisperContext) {
       await initializeWhisper();
-      if (!whisperContext) {
-        addLog('❌ Gagal inisialisasi Whisper');
-        return;
-      }
+      if (!whisperContext) return;
     }
 
-    addLog('=== MEMULAI SESI LATIHAN ===');
-    const wordsArray = inputText.trim().split(/\s+/).map(text => ({
+    const wordsArray = inputText.trim().split(/\s+/).map((text, index) => ({
       text,
-      highlighted: false,
-      spoken: false,
+      status: (index === 0 ? 'current' : 'pending') as Word['status'],
     }));
 
     setWords(wordsArray);
     setCurrentWordIndex(0);
     setProgress(0);
-    setTranscript('');
-    setIsListening(true);
-    addLog(`Total kata: ${wordsArray.length}`);
-    addLog(`Kata pertama: "${wordsArray[0].text}"`);
+    setSessionComplete(false);
+    setScore({ correct: 0, total: wordsArray.length });
+    setIsRecording(true);
 
-    const rec = await startRecording();
-    if (rec) {
-      setRecording(rec);
-    }
+    await startRecordingForWord();
   };
 
-  const processNextWord = async () => {
-    if (!recording || !isListening) {
-      addLog('❌ Tidak ada recording aktif');
-      return;
+  const stopSession = async () => {
+    if (recordingTimer.current) {
+      clearTimeout(recordingTimer.current);
     }
 
-    addLog('Memproses kata...');
-    const audioUri = await stopRecording(recording);
-    setRecording(null);
-    
-    if (audioUri) {
-      await transcribeAudio(audioUri);
-      
-      if (isListening && currentWordIndex < words.length - 1) {
-        const newRec = await startRecording();
-        if (newRec) {
-          setRecording(newRec);
-        }
-      }
-    }
-  };
-
-  const stopListening = async () => {
-    addLog('=== MENGHENTIKAN SESI ===');
-    setIsListening(false);
-    
     if (recording) {
-      const audioUri = await stopRecording(recording);
+      await recording.stopAndUnloadAsync();
       setRecording(null);
-      
-      if (audioUri) {
-        await transcribeAudio(audioUri);
-      }
     }
+
+    setIsRecording(false);
   };
 
   const resetSession = () => {
-    addLog('=== RESET SESI ===');
-    if (recording) {
-      recording.stopAndUnloadAsync().catch(() => {});
-      setRecording(null);
-    }
-    setIsListening(false);
+    stopSession();
     setWords([]);
     setCurrentWordIndex(0);
     setProgress(0);
-    setTranscript('');
     setInputText('');
-    setLogs([]);
+    setSessionComplete(false);
+    setScore({ correct: 0, total: 0 });
+  };
+
+  const getScorePercentage = (): number => {
+    if (score.total === 0) return 0;
+    return Math.round((score.correct / score.total) * 100);
   };
 
   if (checkingModel) {
@@ -467,22 +388,10 @@ export default function QuranPracticeScreen() {
             </View>
           </LinearGradient>
 
-          <View className="bg-teal-600 dark:bg-teal-700 rounded-3xl p-6 mb-6 shadow-lg">
-            <Text className="text-white text-xl font-bold mb-3">
-              Fitur AI Model
-            </Text>
-            <Text className="text-teal-50 leading-6">
-              • Akurasi tinggi untuk bahasa Arab{'\n'}
-              • Deteksi pelafalan real-time{'\n'}
-              • Bekerja tanpa internet setelah diunduh{'\n'}
-              • Model: Whisper Base (Optimal untuk mobile)
-            </Text>
-          </View>
-
           {isDownloading ? (
             <View className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-md border border-gray-100 dark:border-gray-700 mb-6">
               <Text className="text-lg font-bold text-gray-900 dark:text-white mb-4 text-center">
-                Mengunduh Model AI...
+                Mengunduh Patch Fitur...
               </Text>
               <View className="h-3 bg-gray-200 dark:bg-gray-700 rounded-full mb-3 overflow-hidden">
                 <View 
@@ -551,9 +460,6 @@ export default function QuranPracticeScreen() {
             <Text className="text-center text-gray-900 dark:text-white mt-4 font-semibold">
               Memuat AI model...
             </Text>
-            <Text className="text-center text-gray-600 dark:text-gray-400 text-sm mt-2">
-              Ini mungkin memakan waktu beberapa detik
-            </Text>
           </View>
         )}
 
@@ -563,8 +469,9 @@ export default function QuranPracticeScreen() {
           </Text>
           <Text className="text-teal-50">
             1. Ketik atau gunakan teks Quran{'\n'}
-            2. Tekan Mulai dan baca kata per kata{'\n'}
-            3. Tekan Proses untuk kata berikutnya
+            2. Tekan Mulai dan baca kata demi kata{'\n'}
+            3. Sistem akan otomatis mendeteksi setiap kata{'\n'}
+            4. Hijau = benar, Merah = salah
           </Text>
         </View>
 
@@ -587,15 +494,15 @@ export default function QuranPracticeScreen() {
               placeholderTextColor="#9CA3AF"
               multiline
               className="text-gray-900 dark:text-white text-lg min-h-24 text-right"
-              editable={!isListening}
+              editable={!isRecording}
             />
           </View>
           <TouchableOpacity
             onPress={useSampleText}
             className="self-end"
-            disabled={isListening}
+            disabled={isRecording}
           >
-            <Text className={`text-teal-600 dark:text-teal-500 font-semibold ${isListening ? 'opacity-50' : ''}`}>
+            <Text className={`text-teal-600 dark:text-teal-500 font-semibold ${isRecording ? 'opacity-50' : ''}`}>
               Gunakan Contoh (Bismillah)
             </Text>
           </TouchableOpacity>
@@ -605,10 +512,10 @@ export default function QuranPracticeScreen() {
           <View className="mb-6">
             <View className="flex-row items-center justify-between mb-3">
               <Text className="text-lg font-bold text-gray-900 dark:text-white">
-                Kata {currentWordIndex}/{words.length}
+                Progress
               </Text>
               <Text className="text-teal-600 dark:text-teal-500 font-bold">
-                {progress}% Selesai
+                {progress}%
               </Text>
             </View>
             
@@ -625,16 +532,18 @@ export default function QuranPracticeScreen() {
                   <View
                     key={index}
                     className={`px-4 py-2 rounded-xl ${
-                      word.spoken
-                        ? 'bg-teal-600 dark:bg-teal-700'
-                        : index === currentWordIndex
+                      word.status === 'correct'
+                        ? 'bg-green-600 dark:bg-green-700'
+                        : word.status === 'incorrect'
+                        ? 'bg-red-600 dark:bg-red-700'
+                        : word.status === 'current'
                         ? 'bg-amber-500 dark:bg-amber-600'
                         : 'bg-gray-100 dark:bg-gray-700'
                     }`}
                   >
                     <Text
                       className={`text-lg font-bold ${
-                        word.spoken || index === currentWordIndex
+                        word.status !== 'pending'
                           ? 'text-white'
                           : 'text-gray-900 dark:text-white'
                       }`}
@@ -648,109 +557,102 @@ export default function QuranPracticeScreen() {
           </View>
         )}
 
-        <View className="mb-6">
-          <Text className="text-lg font-bold text-gray-900 dark:text-white mb-3">
-            Status
-          </Text>
-          <View className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700">
-            <View className="flex-row items-center mb-3">
-              <View className={`w-3 h-3 rounded-full mr-3 ${isListening ? 'bg-green-500' : 'bg-gray-400'}`} />
-              <Text className="text-gray-900 dark:text-white font-semibold">
-                {isListening ? 'Merekam...' : 'Siap'}
-              </Text>
-            </View>
-            {!isListening && words.length === 0 && (
-              <Text className="text-gray-500 dark:text-gray-400">
-                Tekan Mulai untuk memulai
-              </Text>
-            )}
-            {words.length > 0 && currentWordIndex < words.length && (
-              <View className="mt-3 bg-amber-50 dark:bg-amber-950 rounded-xl p-4">
-                <Text className="text-amber-900 dark:text-amber-100 font-semibold mb-2">
-                  Kata Selanjutnya
-                </Text>
-                <Text className="text-3xl font-bold text-amber-600 dark:text-amber-400 text-right">
-                  {words[currentWordIndex].text}
-                </Text>
-              </View>
-            )}
-          </View>
-        </View>
-
-        {transcript && (
+        {sessionComplete && (
           <View className="mb-6">
-            <Text className="text-lg font-bold text-gray-900 dark:text-white mb-3">
-              Yang Anda Ucapkan
-            </Text>
-            <View className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700">
-              <Text className="text-gray-900 dark:text-white text-lg text-right">
-                {transcript}
-              </Text>
-            </View>
+            <LinearGradient
+              colors={colorScheme === 'dark' ? ['#115e59', '#134e4a'] : ['#0d9488', '#0f766e']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{ borderRadius: 24, padding: 24 }}
+            >
+              <View className="items-center">
+                <IconSymbol size={64} name="check-circle" color="#FFFFFF" />
+                <Text className="text-white text-2xl font-bold mt-4">
+                  Sesi Selesai!
+                </Text>
+                <View className="bg-white/20 rounded-xl p-6 w-full mt-4">
+                  <Text className="text-white text-center text-lg mb-2">
+                    Skor Anda
+                  </Text>
+                  <Text className="text-white text-center text-5xl font-bold">
+                    {getScorePercentage()}%
+                  </Text>
+                  <Text className="text-teal-50 text-center mt-2">
+                    {score.correct} dari {score.total} kata benar
+                  </Text>
+                </View>
+              </View>
+            </LinearGradient>
           </View>
         )}
 
-        {logs.length > 0 && (
+        {!sessionComplete && words.length > 0 && (
           <View className="mb-6">
             <Text className="text-lg font-bold text-gray-900 dark:text-white mb-3">
-              Log Debug
+              Status
             </Text>
-            <View className="bg-gray-900 dark:bg-gray-950 rounded-2xl p-4 border border-gray-700">
-              {logs.map((log, index) => (
-                <Text key={index} className="text-green-400 text-xs font-mono mb-1">
-                  {log}
+            <View className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700">
+              <View className="flex-row items-center mb-3">
+                <View className={`w-3 h-3 rounded-full mr-3 ${isRecording ? 'bg-red-500 animate-pulse' : 'bg-gray-400'}`} />
+                <Text className="text-gray-900 dark:text-white font-semibold">
+                  {isRecording ? 'Mendengarkan...' : 'Siap'}
                 </Text>
-              ))}
+              </View>
+              {isRecording && currentWordIndex < words.length && (
+                <View className="mt-3 bg-amber-50 dark:bg-amber-950 rounded-xl p-4">
+                  <Text className="text-amber-900 dark:text-amber-100 font-semibold mb-2">
+                    Kata Saat Ini ({currentWordIndex + 1}/{words.length})
+                  </Text>
+                  <Text className="text-3xl font-bold text-amber-600 dark:text-amber-400 text-right">
+                    {words[currentWordIndex].text}
+                  </Text>
+                </View>
+              )}
             </View>
           </View>
         )}
 
         <View className="flex-row gap-3 mb-6">
-          {!isListening ? (
-            <TouchableOpacity
-              onPress={startListening}
-              disabled={!inputText.trim() || isInitializing}
-              className={`flex-1 rounded-2xl py-4 shadow-lg ${
-                inputText.trim() && !isInitializing
-                  ? 'bg-teal-600 dark:bg-teal-700'
-                  : 'bg-gray-300 dark:bg-gray-700'
-              }`}
-            >
-              <View className="flex-row items-center justify-center">
-                <IconSymbol size={24} name="play-arrow" color="#FFFFFF" />
-                <Text className="text-white font-bold text-lg ml-2">
-                  Mulai
-                </Text>
-              </View>
-            </TouchableOpacity>
-          ) : (
+          {!isRecording ? (
             <>
               <TouchableOpacity
-                onPress={processNextWord}
-                className="flex-1 bg-blue-600 dark:bg-blue-700 rounded-2xl py-4 shadow-lg"
+                onPress={startSession}
+                disabled={!inputText.trim() || isInitializing}
+                className={`flex-1 rounded-2xl py-4 shadow-lg ${
+                  inputText.trim() && !isInitializing
+                    ? 'bg-teal-600 dark:bg-teal-700'
+                    : 'bg-gray-300 dark:bg-gray-700'
+                }`}
               >
                 <View className="flex-row items-center justify-center">
-                  <IconSymbol size={24} name="skip-next" color="#FFFFFF" />
+                  <IconSymbol size={24} name="play-arrow" color="#FFFFFF" />
                   <Text className="text-white font-bold text-lg ml-2">
-                    Proses
+                    Mulai
                   </Text>
                 </View>
               </TouchableOpacity>
-              <TouchableOpacity
-                onPress={stopListening}
-                className="bg-red-600 dark:bg-red-700 rounded-2xl py-4 px-6 shadow-lg"
-              >
-                <IconSymbol size={24} name="stop" color="#FFFFFF" />
-              </TouchableOpacity>
+              {words.length > 0 && (
+                <TouchableOpacity
+                  onPress={resetSession}
+                  className="bg-gray-600 dark:bg-gray-700 rounded-2xl py-4 px-6 shadow-lg"
+                >
+                  <IconSymbol size={24} name="refresh" color="#FFFFFF" />
+                </TouchableOpacity>
+              )}
             </>
+          ) : (
+            <TouchableOpacity
+              onPress={stopSession}
+              className="flex-1 bg-red-600 dark:bg-red-700 rounded-2xl py-4 shadow-lg"
+            >
+              <View className="flex-row items-center justify-center">
+                <IconSymbol size={24} name="stop" color="#FFFFFF" />
+                <Text className="text-white font-bold text-lg ml-2">
+                  Berhenti
+                </Text>
+              </View>
+            </TouchableOpacity>
           )}
-          
-          <TouchableOpacity
-            onPress={resetSession}
-            className="bg-gray-600 dark:bg-gray-700 rounded-2xl py-4 px-6 shadow-lg"
-          >
-            <IconSymbol size={24} name="refresh" color="#FFFFFF" />
-          </TouchableOpacity>
         </View>
 
         <View className="bg-teal-50 dark:bg-teal-950 rounded-2xl p-6">
@@ -761,7 +663,7 @@ export default function QuranPracticeScreen() {
             </Text>
           </View>
           <Text className="text-gray-700 dark:text-gray-300 leading-6">
-            Baca satu kata dengan jelas, lalu tekan Proses untuk mengecek. Ulangi untuk kata berikutnya.
+            Bacalah kata demi kata dengan jelas. Sistem akan otomatis mendeteksi dan memberikan feedback untuk setiap kata yang Anda ucapkan.
           </Text>
         </View>
       </View>

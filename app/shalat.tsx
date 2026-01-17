@@ -17,6 +17,8 @@ export default function ShalatScreen() {
   const [notificationEnabled, setNotificationEnabled] = useState(true);
   const [adhanEnabled, setAdhanEnabled] = useState(true);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [locationName, setLocationName] = useState<string>('');
+  const [scheduledCount, setScheduledCount] = useState(0);
 
   useEffect(() => {
     loadPrayerTimes();
@@ -31,6 +33,12 @@ export default function ShalatScreen() {
 
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (notificationEnabled) {
+      checkScheduledNotifications();
+    }
+  }, [notificationEnabled]);
 
   const requestNotificationPermission = async () => {
     await notificationService.requestPermissions();
@@ -62,6 +70,22 @@ export default function ShalatScreen() {
         lng: location.coords.longitude,
       };
       setLocation(userLocation);
+
+      try {
+        const geocode = await Location.reverseGeocodeAsync({
+          latitude: userLocation.lat,
+          longitude: userLocation.lng,
+        });
+        
+        if (geocode && geocode.length > 0) {
+          const address = geocode[0];
+          const cityName = address.city || address.subregion || address.region || 'Lokasi Tidak Diketahui';
+          setLocationName(cityName);
+        }
+      } catch (geoError) {
+        console.log('Geocoding failed:', geoError);
+        setLocationName('');
+      }
 
       const times = await prayerTimesService.getPrayerTimes(
         userLocation.lat,
@@ -99,8 +123,10 @@ export default function ShalatScreen() {
     
     if (value && prayerTimes) {
       await notificationService.scheduleAllPrayerNotifications(prayerTimes);
+      await checkScheduledNotifications();
     } else {
       await notificationService.cancelAllNotifications();
+      setScheduledCount(0);
     }
   };
 
@@ -111,6 +137,21 @@ export default function ShalatScreen() {
 
   const testAdhan = async () => {
     await notificationService.playAdhan();
+  };
+
+  const testNotification = async () => {
+    try {
+      await notificationService.testNotification();
+      alert('Notifikasi test akan muncul dalam 2 detik!');
+    } catch (error) {
+      alert('Gagal mengirim notifikasi test');
+      console.error(error);
+    }
+  };
+
+  const checkScheduledNotifications = async () => {
+    const notifications = await notificationService.getScheduledNotifications();
+    setScheduledCount(notifications.length);
   };
 
   const getPrayerIcon = (name: string): any => {
@@ -174,9 +215,30 @@ export default function ShalatScreen() {
             {t('shalat.title')}
           </Text>
         </View>
-        <Text className="text-green-50 text-sm">
-          {prayerTimes?.hijriDate}
-        </Text>
+        <View className="flex-row items-center justify-between">
+          <View className="flex-1">
+            <Text className="text-green-50 text-sm mb-1">
+              {prayerTimes?.hijriDate}
+            </Text>
+            {location && (
+              <View className="flex-row items-center">
+                <IconSymbol size={14} name="location-on" color="#d1fae5" />
+                <Text className="text-green-100 text-xs ml-1">
+                  {locationName || `${location.lat.toFixed(2)}°, ${location.lng.toFixed(2)}°`}
+                </Text>
+              </View>
+            )}
+          </View>
+          {location && (
+            <TouchableOpacity
+              onPress={onRefresh}
+              className="bg-white/20 rounded-full p-2"
+              disabled={refreshing}
+            >
+              <IconSymbol size={20} name="refresh" color="#FFFFFF" />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       <ScrollView
@@ -236,6 +298,46 @@ export default function ShalatScreen() {
           ))}
         </View>
 
+        {location && (
+          <View className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 mb-6">
+            <View className="p-4 border-b border-gray-100 dark:border-gray-700">
+              <Text className="text-lg font-bold text-gray-900 dark:text-white">
+                {t('shalat.location')}
+              </Text>
+            </View>
+            <View className="p-4">
+              {locationName && (
+                <View className="flex-row items-center mb-3">
+                  <View className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full items-center justify-center mr-3">
+                    <IconSymbol size={20} name="location-city" color="#2563eb" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                      {t('shalat.city')}
+                    </Text>
+                    <Text className="text-base font-semibold text-gray-900 dark:text-white">
+                      {locationName}
+                    </Text>
+                  </View>
+                </View>
+              )}
+              <View className="flex-row items-center">
+                <View className="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-full items-center justify-center mr-3">
+                  <IconSymbol size={20} name="my-location" color="#059669" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                    {t('shalat.coordinates')}
+                  </Text>
+                  <Text className="text-sm font-mono text-gray-900 dark:text-white">
+                    {location.lat.toFixed(6)}, {location.lng.toFixed(6)}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        )}
+
         <View className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 mb-6">
           <View className="p-4 border-b border-gray-100 dark:border-gray-700">
             <Text className="text-lg font-bold text-gray-900 dark:text-white">
@@ -251,6 +353,11 @@ export default function ShalatScreen() {
               <Text className="text-sm text-gray-500 dark:text-gray-400">
                 {t('shalat.notificationDesc')}
               </Text>
+              {notificationEnabled && scheduledCount > 0 && (
+                <Text className="text-xs text-green-600 dark:text-green-400 mt-1">
+                  ✓ {scheduledCount} notifikasi terjadwal
+                </Text>
+              )}
             </View>
             <Switch
               value={notificationEnabled}
@@ -281,11 +388,23 @@ export default function ShalatScreen() {
         {adhanEnabled && (
           <TouchableOpacity
             onPress={testAdhan}
-            className="bg-green-100 dark:bg-green-900 rounded-2xl p-4 flex-row items-center justify-center"
+            className="bg-green-100 dark:bg-green-900 rounded-2xl p-4 flex-row items-center justify-center mb-3"
           >
             <IconSymbol size={24} name="volume-up" color="#059669" />
             <Text className="text-green-700 dark:text-green-300 font-semibold ml-2">
               {t('shalat.testAdhan')}
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {notificationEnabled && (
+          <TouchableOpacity
+            onPress={testNotification}
+            className="bg-blue-100 dark:bg-blue-900 rounded-2xl p-4 flex-row items-center justify-center"
+          >
+            <IconSymbol size={24} name="notifications" color="#2563eb" />
+            <Text className="text-blue-700 dark:text-blue-300 font-semibold ml-2">
+              {t('shalat.testNotification')}
             </Text>
           </TouchableOpacity>
         )}

@@ -75,9 +75,11 @@ class PrayerTimesService {
       const response = await this.fetchPrayerTimes(latitude, longitude);
       const data = response.data;
 
+      // console.log('Fetched prayer times from API:', data);
+
       const prayerTimes: PrayerTimes = {
         date: today,
-        hijriDate: `${data.date.hijri.date} ${data.date.hijri.month.en} ${data.date.hijri.year}`,
+        hijriDate: `${data.date.hijri.date?.substring(0,2)} ${data.date.hijri.month.en} ${data.date.hijri.year} (${data.date.readable})`,
         fajr: this.formatTime(data.timings.Fajr),
         sunrise: this.formatTime(data.timings.Sunrise),
         dhuhr: this.formatTime(data.timings.Dhuhr),
