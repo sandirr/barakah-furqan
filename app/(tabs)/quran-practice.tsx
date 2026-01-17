@@ -5,6 +5,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { initWhisper, WhisperContext } from 'whisper.rn';
 
 interface Word {
@@ -440,233 +441,235 @@ export default function QuranPracticeScreen() {
   }
 
   return (
-    <ScrollView className="flex-1 bg-white dark:bg-gray-900">
-      <View className="px-4 pt-16 pb-6">
-        <View className="items-center mb-8">
-          <View className="w-20 h-20 bg-teal-600 dark:bg-teal-700 rounded-full items-center justify-center mb-4 shadow-lg">
-            <IconSymbol size={40} name="mic" color="#FFFFFF" />
-          </View>
-          <Text className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            Latihan Baca Quran
-          </Text>
-          <Text className="text-center text-gray-600 dark:text-gray-400">
-            Latih bacaan Quran dengan bantuan AI
-          </Text>
-        </View>
-
-        {isInitializing && (
-          <View className="bg-blue-50 dark:bg-blue-950 rounded-2xl p-6 mb-6">
-            <ActivityIndicator size="large" color="#0d9488" />
-            <Text className="text-center text-gray-900 dark:text-white mt-4 font-semibold">
-              Memuat AI model...
+    <SafeAreaView className="flex-1 bg-white dark:bg-gray-900">
+      <ScrollView contentContainerStyle={{ flex: 1, padding: 16 }}>
+        <View>
+          <View className="items-center mb-8">
+            <View className="w-20 h-20 bg-teal-600 dark:bg-teal-700 rounded-full items-center justify-center mb-4 shadow-lg">
+              <IconSymbol size={40} name="mic" color="#FFFFFF" />
+            </View>
+            <Text className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+              Latihan Baca Quran
+            </Text>
+            <Text className="text-center text-gray-600 dark:text-gray-400">
+              Latih bacaan Quran dengan bantuan AI
             </Text>
           </View>
-        )}
 
-        <View className="bg-teal-600 dark:bg-teal-700 rounded-3xl p-6 mb-6 shadow-lg">
-          <Text className="text-white text-xl font-bold mb-3">
-            Cara Menggunakan
-          </Text>
-          <Text className="text-teal-50">
-            1. Ketik atau gunakan teks Quran{'\n'}
-            2. Tekan Mulai dan baca kata demi kata{'\n'}
-            3. Sistem akan otomatis mendeteksi setiap kata{'\n'}
-            4. Hijau = benar, Merah = salah
-          </Text>
-        </View>
-
-        <View className="mb-6">
-          <View className="flex-row items-center justify-between mb-3">
-            <Text className="text-lg font-bold text-gray-900 dark:text-white">
-              Teks Quran
-            </Text>
-            <TouchableOpacity onPress={deleteModel}>
-              <Text className="text-red-600 dark:text-red-500 text-sm">
-                Hapus Model
+          {isInitializing && (
+            <View className="bg-blue-50 dark:bg-blue-950 rounded-2xl p-6 mb-6">
+              <ActivityIndicator size="large" color="#0d9488" />
+              <Text className="text-center text-gray-900 dark:text-white mt-4 font-semibold">
+                Memuat AI model...
               </Text>
-            </TouchableOpacity>
-          </View>
-          <View className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-200 dark:border-gray-700 mb-3">
-            <TextInput
-              value={inputText}
-              onChangeText={setInputText}
-              placeholder="Masukkan teks Arab di sini..."
-              placeholderTextColor="#9CA3AF"
-              multiline
-              className="text-gray-900 dark:text-white text-lg min-h-24 text-right"
-              editable={!isRecording}
-            />
-          </View>
-          <TouchableOpacity
-            onPress={useSampleText}
-            className="self-end"
-            disabled={isRecording}
-          >
-            <Text className={`text-teal-600 dark:text-teal-500 font-semibold ${isRecording ? 'opacity-50' : ''}`}>
-              Gunakan Contoh (Bismillah)
-            </Text>
-          </TouchableOpacity>
-        </View>
+            </View>
+          )}
 
-        {words.length > 0 && (
+          <View className="bg-teal-600 dark:bg-teal-700 rounded-3xl p-6 mb-6 shadow-lg">
+            <Text className="text-white text-xl font-bold mb-3">
+              Cara Menggunakan
+            </Text>
+            <Text className="text-teal-50">
+              1. Ketik atau gunakan teks Quran{'\n'}
+              2. Tekan Mulai dan baca kata demi kata{'\n'}
+              3. Sistem akan otomatis mendeteksi setiap kata{'\n'}
+              4. Hijau = benar, Merah = salah
+            </Text>
+          </View>
+
           <View className="mb-6">
             <View className="flex-row items-center justify-between mb-3">
               <Text className="text-lg font-bold text-gray-900 dark:text-white">
-                Progress
+                Teks Quran
               </Text>
-              <Text className="text-teal-600 dark:text-teal-500 font-bold">
-                {progress}%
-              </Text>
+              <TouchableOpacity onPress={deleteModel}>
+                <Text className="text-red-600 dark:text-red-500 text-sm">
+                  Hapus Model
+                </Text>
+              </TouchableOpacity>
             </View>
-            
-            <View className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full mb-4">
-              <View 
-                className="h-full bg-teal-600 dark:bg-teal-500 rounded-full"
-                style={{ width: `${progress}%` }}
+            <View className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-200 dark:border-gray-700 mb-3">
+              <TextInput
+                value={inputText}
+                onChangeText={setInputText}
+                placeholder="Masukkan teks Arab di sini..."
+                placeholderTextColor="#9CA3AF"
+                multiline
+                className="text-gray-900 dark:text-white text-lg min-h-24 text-right"
+                editable={!isRecording}
               />
             </View>
+            <TouchableOpacity
+              onPress={useSampleText}
+              className="self-end"
+              disabled={isRecording}
+            >
+              <Text className={`text-teal-600 dark:text-teal-500 font-semibold ${isRecording ? 'opacity-50' : ''}`}>
+                Gunakan Contoh (Bismillah)
+              </Text>
+            </TouchableOpacity>
+          </View>
 
-            <View className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700">
-              <View className="flex-row flex-wrap gap-2 justify-end">
-                {words.map((word, index) => (
-                  <View
-                    key={index}
-                    className={`px-4 py-2 rounded-xl ${
-                      word.status === 'correct'
-                        ? 'bg-green-600 dark:bg-green-700'
-                        : word.status === 'incorrect'
-                        ? 'bg-red-600 dark:bg-red-700'
-                        : word.status === 'current'
-                        ? 'bg-amber-500 dark:bg-amber-600'
-                        : 'bg-gray-100 dark:bg-gray-700'
-                    }`}
-                  >
-                    <Text
-                      className={`text-lg font-bold ${
-                        word.status !== 'pending'
-                          ? 'text-white'
-                          : 'text-gray-900 dark:text-white'
+          {words.length > 0 && (
+            <View className="mb-6">
+              <View className="flex-row items-center justify-between mb-3">
+                <Text className="text-lg font-bold text-gray-900 dark:text-white">
+                  Progress
+                </Text>
+                <Text className="text-teal-600 dark:text-teal-500 font-bold">
+                  {progress}%
+                </Text>
+              </View>
+              
+              <View className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full mb-4">
+                <View 
+                  className="h-full bg-teal-600 dark:bg-teal-500 rounded-full"
+                  style={{ width: `${progress}%` }}
+                />
+              </View>
+
+              <View className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700">
+                <View className="flex-row flex-wrap gap-2 justify-end">
+                  {words.map((word, index) => (
+                    <View
+                      key={index}
+                      className={`px-4 py-2 rounded-xl ${
+                        word.status === 'correct'
+                          ? 'bg-green-600 dark:bg-green-700'
+                          : word.status === 'incorrect'
+                          ? 'bg-red-600 dark:bg-red-700'
+                          : word.status === 'current'
+                          ? 'bg-amber-500 dark:bg-amber-600'
+                          : 'bg-gray-100 dark:bg-gray-700'
                       }`}
                     >
-                      {word.text}
+                      <Text
+                        className={`text-lg font-bold ${
+                          word.status !== 'pending'
+                            ? 'text-white'
+                            : 'text-gray-900 dark:text-white'
+                        }`}
+                      >
+                        {word.text}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            </View>
+          )}
+
+          {sessionComplete && (
+            <View className="mb-6">
+              <LinearGradient
+                colors={colorScheme === 'dark' ? ['#115e59', '#134e4a'] : ['#0d9488', '#0f766e']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={{ borderRadius: 24, padding: 24 }}
+              >
+                <View className="items-center">
+                  <IconSymbol size={64} name="check-circle" color="#FFFFFF" />
+                  <Text className="text-white text-2xl font-bold mt-4">
+                    Sesi Selesai!
+                  </Text>
+                  <View className="bg-white/20 rounded-xl p-6 w-full mt-4">
+                    <Text className="text-white text-center text-lg mb-2">
+                      Skor Anda
+                    </Text>
+                    <Text className="text-white text-center text-5xl font-bold">
+                      {getScorePercentage()}%
+                    </Text>
+                    <Text className="text-teal-50 text-center mt-2">
+                      {score.correct} dari {score.total} kata benar
                     </Text>
                   </View>
-                ))}
-              </View>
+                </View>
+              </LinearGradient>
             </View>
-          </View>
-        )}
+          )}
 
-        {sessionComplete && (
-          <View className="mb-6">
-            <LinearGradient
-              colors={colorScheme === 'dark' ? ['#115e59', '#134e4a'] : ['#0d9488', '#0f766e']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={{ borderRadius: 24, padding: 24 }}
-            >
-              <View className="items-center">
-                <IconSymbol size={64} name="check-circle" color="#FFFFFF" />
-                <Text className="text-white text-2xl font-bold mt-4">
-                  Sesi Selesai!
-                </Text>
-                <View className="bg-white/20 rounded-xl p-6 w-full mt-4">
-                  <Text className="text-white text-center text-lg mb-2">
-                    Skor Anda
-                  </Text>
-                  <Text className="text-white text-center text-5xl font-bold">
-                    {getScorePercentage()}%
-                  </Text>
-                  <Text className="text-teal-50 text-center mt-2">
-                    {score.correct} dari {score.total} kata benar
+          {!sessionComplete && words.length > 0 && (
+            <View className="mb-6">
+              <Text className="text-lg font-bold text-gray-900 dark:text-white mb-3">
+                Status
+              </Text>
+              <View className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700">
+                <View className="flex-row items-center mb-3">
+                  <View className={`w-3 h-3 rounded-full mr-3 ${isRecording ? 'bg-red-500 animate-pulse' : 'bg-gray-400'}`} />
+                  <Text className="text-gray-900 dark:text-white font-semibold">
+                    {isRecording ? 'Mendengarkan...' : 'Siap'}
                   </Text>
                 </View>
+                {isRecording && currentWordIndex < words.length && (
+                  <View className="mt-3 bg-amber-50 dark:bg-amber-950 rounded-xl p-4">
+                    <Text className="text-amber-900 dark:text-amber-100 font-semibold mb-2">
+                      Kata Saat Ini ({currentWordIndex + 1}/{words.length})
+                    </Text>
+                    <Text className="text-3xl font-bold text-amber-600 dark:text-amber-400 text-right">
+                      {words[currentWordIndex].text}
+                    </Text>
+                  </View>
+                )}
               </View>
-            </LinearGradient>
-          </View>
-        )}
-
-        {!sessionComplete && words.length > 0 && (
-          <View className="mb-6">
-            <Text className="text-lg font-bold text-gray-900 dark:text-white mb-3">
-              Status
-            </Text>
-            <View className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700">
-              <View className="flex-row items-center mb-3">
-                <View className={`w-3 h-3 rounded-full mr-3 ${isRecording ? 'bg-red-500 animate-pulse' : 'bg-gray-400'}`} />
-                <Text className="text-gray-900 dark:text-white font-semibold">
-                  {isRecording ? 'Mendengarkan...' : 'Siap'}
-                </Text>
-              </View>
-              {isRecording && currentWordIndex < words.length && (
-                <View className="mt-3 bg-amber-50 dark:bg-amber-950 rounded-xl p-4">
-                  <Text className="text-amber-900 dark:text-amber-100 font-semibold mb-2">
-                    Kata Saat Ini ({currentWordIndex + 1}/{words.length})
-                  </Text>
-                  <Text className="text-3xl font-bold text-amber-600 dark:text-amber-400 text-right">
-                    {words[currentWordIndex].text}
-                  </Text>
-                </View>
-              )}
             </View>
-          </View>
-        )}
+          )}
 
-        <View className="flex-row gap-3 mb-6">
-          {!isRecording ? (
-            <>
+          <View className="flex-row gap-3 mb-6">
+            {!isRecording ? (
+              <>
+                <TouchableOpacity
+                  onPress={startSession}
+                  disabled={!inputText.trim() || isInitializing}
+                  className={`flex-1 rounded-2xl py-4 shadow-lg ${
+                    inputText.trim() && !isInitializing
+                      ? 'bg-teal-600 dark:bg-teal-700'
+                      : 'bg-gray-300 dark:bg-gray-700'
+                  }`}
+                >
+                  <View className="flex-row items-center justify-center">
+                    <IconSymbol size={24} name="play-arrow" color="#FFFFFF" />
+                    <Text className="text-white font-bold text-lg ml-2">
+                      Mulai
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+                {words.length > 0 && (
+                  <TouchableOpacity
+                    onPress={resetSession}
+                    className="bg-gray-600 dark:bg-gray-700 rounded-2xl py-4 px-6 shadow-lg"
+                  >
+                    <IconSymbol size={24} name="refresh" color="#FFFFFF" />
+                  </TouchableOpacity>
+                )}
+              </>
+            ) : (
               <TouchableOpacity
-                onPress={startSession}
-                disabled={!inputText.trim() || isInitializing}
-                className={`flex-1 rounded-2xl py-4 shadow-lg ${
-                  inputText.trim() && !isInitializing
-                    ? 'bg-teal-600 dark:bg-teal-700'
-                    : 'bg-gray-300 dark:bg-gray-700'
-                }`}
+                onPress={stopSession}
+                className="flex-1 bg-red-600 dark:bg-red-700 rounded-2xl py-4 shadow-lg"
               >
                 <View className="flex-row items-center justify-center">
-                  <IconSymbol size={24} name="play-arrow" color="#FFFFFF" />
+                  <IconSymbol size={24} name="stop" color="#FFFFFF" />
                   <Text className="text-white font-bold text-lg ml-2">
-                    Mulai
+                    Berhenti
                   </Text>
                 </View>
               </TouchableOpacity>
-              {words.length > 0 && (
-                <TouchableOpacity
-                  onPress={resetSession}
-                  className="bg-gray-600 dark:bg-gray-700 rounded-2xl py-4 px-6 shadow-lg"
-                >
-                  <IconSymbol size={24} name="refresh" color="#FFFFFF" />
-                </TouchableOpacity>
-              )}
-            </>
-          ) : (
-            <TouchableOpacity
-              onPress={stopSession}
-              className="flex-1 bg-red-600 dark:bg-red-700 rounded-2xl py-4 shadow-lg"
-            >
-              <View className="flex-row items-center justify-center">
-                <IconSymbol size={24} name="stop" color="#FFFFFF" />
-                <Text className="text-white font-bold text-lg ml-2">
-                  Berhenti
-                </Text>
-              </View>
-            </TouchableOpacity>
-          )}
-        </View>
+            )}
+          </View>
 
-        <View className="bg-teal-50 dark:bg-teal-950 rounded-2xl p-6">
-          <View className="flex-row items-center mb-3">
-            <IconSymbol size={24} name="info" color="#0d9488" />
-            <Text className="text-lg font-semibold text-gray-900 dark:text-white ml-2">
-              Tips
+          <View className="bg-teal-50 dark:bg-teal-950 rounded-2xl p-6">
+            <View className="flex-row items-center mb-3">
+              <IconSymbol size={24} name="info" color="#0d9488" />
+              <Text className="text-lg font-semibold text-gray-900 dark:text-white ml-2">
+                Tips
+              </Text>
+            </View>
+            <Text className="text-gray-700 dark:text-gray-300 leading-6">
+              Bacalah kata demi kata dengan jelas. Sistem akan otomatis mendeteksi dan memberikan feedback untuk setiap kata yang Anda ucapkan.
             </Text>
           </View>
-          <Text className="text-gray-700 dark:text-gray-300 leading-6">
-            Bacalah kata demi kata dengan jelas. Sistem akan otomatis mendeteksi dan memberikan feedback untuk setiap kata yang Anda ucapkan.
-          </Text>
         </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }

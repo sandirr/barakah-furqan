@@ -7,6 +7,7 @@ import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, FlatList, Modal, NativeScrollEvent, NativeSyntheticEvent, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function SurahDetailScreen() {
   const { t, i18n } = useTranslation();
@@ -197,6 +198,8 @@ export default function SurahDetailScreen() {
     }
   };
 
+  const insets = useSafeAreaInsets();
+
   const renderHeader = () => {
     if (!surah) return null;
 
@@ -300,8 +303,8 @@ export default function SurahDetailScreen() {
   }
 
   return (
-    <View className="flex-1 bg-white dark:bg-gray-900">
-      <View className="px-6 pt-16 pb-4 bg-emerald-600 dark:bg-emerald-700">
+    <SafeAreaView className="flex-1 bg-white dark:bg-gray-900">
+      <View className="p-4 bg-emerald-600 dark:bg-emerald-700">
         <View className="flex-row items-center">
           <TouchableOpacity onPress={() => router.back()} className="mr-3">
             <IconSymbol size={24} name="arrow-back" color="#FFFFFF" />
@@ -343,7 +346,7 @@ export default function SurahDetailScreen() {
         }}
       />
 
-      <View className="absolute bottom-0 left-0 right-0 px-4 pb-4">
+      <View className="absolute left-0 right-0 px-4 pb-4" style={{ bottom: insets.bottom }}>
         <View className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
           <View className="h-1 bg-gray-200 dark:bg-gray-700">
             <View 
@@ -494,6 +497,6 @@ export default function SurahDetailScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }

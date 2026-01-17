@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function QuranListScreen() {
   const { t } = useTranslation();
@@ -114,45 +115,47 @@ export default function QuranListScreen() {
   }
 
   return (
-    <View className="flex-1 bg-white dark:bg-gray-900">
-      <View className="px-4 pt-16 pb-4 bg-emerald-600 dark:bg-emerald-700">
-        <View className="flex-row items-center mb-4">
-          <TouchableOpacity onPress={() => router.back()} className="mr-3">
-            <IconSymbol size={24} name="arrow-back" color="#FFFFFF" />
-          </TouchableOpacity>
-          <Text className="text-2xl font-bold text-white flex-1">
-            {t('quran.title')}
-          </Text>
-        </View>
-        <Text className="text-emerald-50 text-sm mb-4">
-          {t('quran.description')}
-        </Text>
-
-        <View className="bg-white dark:bg-gray-800 rounded-2xl flex-row items-center px-4 py-1">
-          <IconSymbol size={20} name="search" color="#6B7280" />
-          <TextInput
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder={t('quran.searchPlaceholder')}
-            placeholderTextColor="#9CA3AF"
-            className="flex-1 ml-3 text-gray-900 dark:text-white text-base"
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={clearSearch}>
-              <IconSymbol size={20} name="close" color="#6B7280" />
+    <SafeAreaView className="flex-1 bg-emerald-600 dark:bg-emerald-700">
+      <View className='bg-white dark:bg-gray-900 flex-1'>
+        <View className="p-4 bg-emerald-600 dark:bg-emerald-700">
+          <View className="flex-row items-center mb-4">
+            <TouchableOpacity onPress={() => router.back()} className="mr-3">
+              <IconSymbol size={24} name="arrow-back" color="#FFFFFF" />
             </TouchableOpacity>
-          )}
-        </View>
-      </View>
+            <Text className="text-2xl font-bold text-white flex-1">
+              {t('quran.title')}
+            </Text>
+          </View>
+          <Text className="text-emerald-50 text-sm mb-4">
+            {t('quran.description')}
+          </Text>
 
-      <FlatList
-        data={filteredSurahs}
-        renderItem={renderSurah}
-        keyExtractor={(item) => item.number.toString()}
-        contentContainerStyle={{ padding: 16 }}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={renderEmptyList}
-      />
-    </View>
+          <View className="bg-white dark:bg-gray-800 rounded-2xl flex-row items-center px-4 py-1">
+            <IconSymbol size={20} name="search" color="#6B7280" />
+            <TextInput
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder={t('quran.searchPlaceholder')}
+              placeholderTextColor="#9CA3AF"
+              className="flex-1 ml-3 text-gray-900 dark:text-white text-base"
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={clearSearch}>
+                <IconSymbol size={20} name="close" color="#6B7280" />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
+        <FlatList
+          data={filteredSurahs}
+          renderItem={renderSurah}
+          keyExtractor={(item) => item.number.toString()}
+          contentContainerStyle={{ padding: 16 }}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={renderEmptyList}
+        />
+      </View>
+    </SafeAreaView>
   );
 }

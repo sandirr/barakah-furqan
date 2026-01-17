@@ -6,6 +6,7 @@ import { Magnetometer } from 'expo-sensors';
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Animated, Dimensions, ScrollView, Text, TouchableOpacity, useColorScheme, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 const COMPASS_SIZE = width * 0.7;
@@ -164,7 +165,7 @@ export default function KiblatScreen() {
   if (loading) {
     return (
       <View className="flex-1 bg-white dark:bg-gray-900 items-center justify-center">
-        <ActivityIndicator size="large" color="#059669" />
+        <ActivityIndicator size="large" color="#14B8A6" />
         <Text className="text-gray-600 dark:text-gray-400 mt-4">{t('common.loading')}</Text>
       </View>
     );
@@ -199,8 +200,8 @@ export default function KiblatScreen() {
   }
 
   return (
-    <View className="flex-1 bg-white dark:bg-gray-900">
-      <View className="px-4 pt-16 pb-4 bg-teal-600 dark:bg-teal-700">
+    <SafeAreaView className="flex-1 bg-white dark:bg-gray-900">
+      <View className="p-4 bg-teal-600 dark:bg-teal-700">
         <View className="flex-row items-center mb-4">
           <TouchableOpacity onPress={() => router.back()} className="mr-3">
             <IconSymbol size={24} name="arrow-back" color="#FFFFFF" />
@@ -359,6 +360,6 @@ export default function KiblatScreen() {
           </LinearGradient>
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }

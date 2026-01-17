@@ -3,7 +3,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, Text, TouchableOpacity, useColorScheme, View } from 'react-native';
+import { Image, ScrollView, Text, TouchableOpacity, useColorScheme, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
   const { t } = useTranslation();
@@ -41,12 +42,16 @@ export default function HomeScreen() {
   };
 
   return (
-    <ScrollView className="flex-1 bg-white dark:bg-gray-900">
-      <View className="px-4 pt-16 pb-6">
+    <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={["top"]}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ padding: 16 }}
+      >
         <View className="items-center mb-8">
-          <View className="w-20 h-20 bg-emerald-600 dark:bg-emerald-700 rounded-full items-center justify-center mb-4 shadow-lg">
+          {/* <View className="w-20 h-20 bg-emerald-600 dark:bg-emerald-700 rounded-full items-center justify-center mb-4 shadow-lg">
             <IconSymbol size={40} name="book" color="#FFFFFF" />
-          </View>
+          </View> */}
+          <Image source={require("@/assets/images/icon-barakah.png")} className='h-20 w-20 rounded-full mb-4' />
           <Text className="text-3xl font-bold text-gray-900 dark:text-white">
             Barakah Furqan
           </Text>
@@ -103,7 +108,7 @@ export default function HomeScreen() {
             {t('home.dailyReminderText')}
           </Text>
         </LinearGradient>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }

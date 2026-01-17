@@ -6,6 +6,7 @@ import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, RefreshControl, ScrollView, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ShalatScreen() {
   const { t } = useTranslation();
@@ -205,8 +206,8 @@ export default function ShalatScreen() {
   }
 
   return (
-    <View className="flex-1 bg-white dark:bg-gray-900">
-      <View className="px-4 pt-16 pb-4 bg-green-600 dark:bg-green-700">
+    <SafeAreaView className="flex-1 bg-white dark:bg-gray-900">
+      <View className="p-4 bg-green-600 dark:bg-green-700">
         <View className="flex-row items-center mb-4">
           <TouchableOpacity onPress={() => router.back()} className="mr-3">
             <IconSymbol size={24} name="arrow-back" color="#FFFFFF" />
@@ -409,6 +410,6 @@ export default function ShalatScreen() {
           </TouchableOpacity>
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
