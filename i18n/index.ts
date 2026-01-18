@@ -3,20 +3,24 @@ import * as Localization from 'expo-localization';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
+import ar from './locales/ar.json';
 import en from './locales/en.json';
 import id from './locales/id.json';
+import ms from './locales/ms.json';
+import ur from './locales/ur.json';
 
 const LANGUAGE_KEY = '@barakah_furqan:language';
 
 const resources = {
   en: { translation: en },
   id: { translation: id },
+  ms: { translation: ms },
+  ur: { translation: ur },
+  ar: { translation: ar },
 };
 
-// Get device language
 const deviceLanguage = Localization.getLocales()[0]?.languageCode || 'en';
 
-// Initialize i18n
 const initI18n = async () => {
   let savedLanguage = deviceLanguage;
   
@@ -44,7 +48,6 @@ const initI18n = async () => {
       },
     });
 
-  // Save language on change
   i18n.on('languageChanged', async (lng) => {
     try {
       await AsyncStorage.setItem(LANGUAGE_KEY, lng);

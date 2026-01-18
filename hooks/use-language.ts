@@ -1,10 +1,13 @@
 import { useTranslation } from 'react-i18next';
 
-export type Language = 'en' | 'id';
+export type Language = string;
 
 export const LANGUAGES = [
-  { code: 'en', name: 'English', nativeName: 'English' },
-  { code: 'id', name: 'Indonesian', nativeName: 'Bahasa Indonesia' },
+  { code: 'id', name: 'Indonesian', nativeName: 'Bahasa Indonesia', flag: '🇮🇩' },
+  { code: 'en', name: 'English', nativeName: 'English', flag: '🇬🇧' },
+  { code: 'ms', name: 'Malay', nativeName: 'Bahasa Melayu', flag: '🇲🇾' },
+  { code: 'ur', name: 'Urdu', nativeName: 'اردو', flag: '🇵🇰' },
+  { code: 'ar', name: 'Arabic', nativeName: 'العربية', flag: '🇸🇦' },
 ] as const;
 
 export const useLanguage = () => {

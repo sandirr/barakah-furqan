@@ -1,9 +1,14 @@
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Audio } from 'expo-av';
+import {
+  AudioModule,
+  RecordingOptions,
+  useAudioRecorder
+} from 'expo-audio';
 import * as FileSystem from 'expo-file-system/legacy';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { initWhisper, WhisperContext } from 'whisper.rn';
@@ -16,10 +21,36 @@ interface Word {
 const MODEL_URL = 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin';
 const MODEL_SIZE_MB = 148;
 const MODEL_NAME = 'ggml-base.bin';
-const RECORDING_INTERVAL = 3000; // 3 seconds per word
+const RECORDING_INTERVAL = 3000;
+
+const recordingOptions: RecordingOptions = {
+  isMeteringEnabled: false,
+  extension: '.m4a',
+  sampleRate: 16000,
+  numberOfChannels: 1,
+  bitRate: 128000,
+  android: {
+    extension: '.m4a',
+    sampleRate: 16000,
+    outputFormat: 'mpeg4',
+    audioEncoder: 'aac',
+  },
+  ios: {
+    extension: '.m4a',
+    sampleRate: 16000,
+    audioQuality: 127,
+  },
+  web: {
+    mimeType: 'audio/webm',
+    bitsPerSecond: 128000,
+  },
+};
 
 export default function QuranPracticeScreen() {
+  const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
+  const audioRecorder = useAudioRecorder(recordingOptions);
+  
   const [inputText, setInputText] = useState('');
   const [words, setWords] = useState<Word[]>([]);
   const [isRecording, setIsRecording] = useState(false);
@@ -27,7 +58,6 @@ export default function QuranPracticeScreen() {
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [progress, setProgress] = useState(0);
   const [whisperContext, setWhisperContext] = useState<WhisperContext | null>(null);
-  const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [sessionComplete, setSessionComplete] = useState(false);
   const [score, setScore] = useState({ correct: 0, total: 0 });
   
@@ -41,10 +71,11 @@ export default function QuranPracticeScreen() {
 
   useEffect(() => {
     checkModelExists();
-    setupAudio();
+    requestPermissions();
+    
     return () => {
-      if (recording) {
-        recording.stopAndUnloadAsync().catch(() => {});
+      if (audioRecorder?.isRecording) {
+        audioRecorder.stop();
       }
       if (whisperContext) {
         whisperContext.release().catch(() => {});
@@ -55,6 +86,17 @@ export default function QuranPracticeScreen() {
     };
   }, []);
 
+  const requestPermissions = async () => {
+    try {
+      const { granted } = await AudioModule.requestRecordingPermissionsAsync();
+      if (!granted) {
+        Alert.alert(t('quranPractice.error'), t('quranPractice.micPermissionRequired'));
+      }
+    } catch (error) {
+      console.error('Error requesting permissions:', error);
+    }
+  };
+
   const checkModelExists = async () => {
     try {
       const fileInfo = await FileSystem.getInfoAsync(modelPath);
@@ -63,23 +105,6 @@ export default function QuranPracticeScreen() {
       console.error('Error checking model:', error);
     } finally {
       setCheckingModel(false);
-    }
-  };
-
-  const setupAudio = async () => {
-    try {
-      const { status } = await Audio.requestPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Error', 'Izin mikrofon diperlukan');
-        return;
-      }
-      
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-      });
-    } catch (error) {
-      console.error('Error setting up audio:', error);
     }
   };
 
@@ -104,10 +129,10 @@ export default function QuranPracticeScreen() {
       
       if (result && result.uri) {
         setModelDownloaded(true);
-        Alert.alert('Berhasil', 'Fitur latihan baca Quran siap digunakan!');
+        Alert.alert(t('quranPractice.success'), t('quranPractice.featureReady'));
       }
     } catch (error) {
-      Alert.alert('Error', 'Gagal mengunduh model. Coba lagi nanti.');
+      Alert.alert(t('quranPractice.error'), t('quranPractice.downloadFailed'));
       console.error('Download error:', error);
     } finally {
       setIsDownloading(false);
@@ -117,12 +142,12 @@ export default function QuranPracticeScreen() {
 
   const deleteModel = async () => {
     Alert.alert(
-      'Hapus Model',
-      `Ini akan menghapus model AI (${MODEL_SIZE_MB}MB). Anda perlu mengunduh ulang untuk menggunakan fitur ini.`,
+      t('quranPractice.deleteModel'),
+      t('quranPractice.deleteConfirmation', { size: MODEL_SIZE_MB }),
       [
-        { text: 'Batal', style: 'cancel' },
+        { text: t('quranPractice.cancel'), style: 'cancel' },
         {
-          text: 'Hapus',
+          text: t('quranPractice.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -132,9 +157,9 @@ export default function QuranPracticeScreen() {
                 await whisperContext.release();
                 setWhisperContext(null);
               }
-              Alert.alert('Berhasil', 'Model berhasil dihapus');
+              Alert.alert(t('quranPractice.success'), t('quranPractice.modelDeleted'));
             } catch (error) {
-              Alert.alert('Error', 'Gagal menghapus model');
+              Alert.alert(t('quranPractice.error'), t('quranPractice.deleteFailed'));
             }
           },
         },
@@ -145,7 +170,7 @@ export default function QuranPracticeScreen() {
   const initializeWhisper = async () => {
     if (whisperContext) return;
     if (!modelDownloaded) {
-      Alert.alert('Error', 'Model belum diunduh. Silakan unduh fitur terlebih dahulu.');
+      Alert.alert(t('quranPractice.error'), t('quranPractice.modelNotDownloaded'));
       return;
     }
 
@@ -160,12 +185,12 @@ export default function QuranPracticeScreen() {
     } catch (error) {
       console.error('Error initializing Whisper:', error);
       Alert.alert(
-        'Error Inisialisasi',
-        'Gagal memuat model AI. Coba hapus dan download ulang model.',
+        t('quranPractice.initializationError'),
+        t('quranPractice.initializationFailed'),
         [
-          { text: 'OK' },
+          { text: t('quranPractice.ok') },
           { 
-            text: 'Hapus Model', 
+            text: t('quranPractice.deleteModel'), 
             onPress: deleteModel,
             style: 'destructive' 
           }
@@ -183,31 +208,27 @@ export default function QuranPracticeScreen() {
 
   const startRecordingForWord = async () => {
     try {
-      const { recording: newRecording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.MINIMUM_BALANCE
-      );
-      setRecording(newRecording);
+      await audioRecorder.record();
       
       recordingTimer.current = setTimeout(() => {
         processCurrentWord();
       }, RECORDING_INTERVAL);
     } catch (error) {
       console.error('Failed to start recording:', error);
+      Alert.alert(t('quranPractice.error'), t('quranPractice.recordingFailed'));
     }
   };
 
-  const stopCurrentRecording = async (): Promise<string | null> => {
+  const stopCurrentRecording = async (): Promise<string | null | any> => {
     if (recordingTimer.current) {
       clearTimeout(recordingTimer.current);
     }
 
-    if (!recording) return null;
+    if (!audioRecorder.isRecording) return null;
 
     try {
-      await recording.stopAndUnloadAsync();
-      const uri = recording.getURI();
-      setRecording(null);
-      return uri;
+      const uri = await audioRecorder.stop();
+      return null;
     } catch (error) {
       console.error('Failed to stop recording:', error);
       return null;
@@ -283,14 +304,14 @@ export default function QuranPracticeScreen() {
     setIsRecording(false);
     setSessionComplete(true);
     
-    if (recording) {
+    if (audioRecorder.isRecording) {
       await stopCurrentRecording();
     }
   };
 
   const startSession = async () => {
     if (!inputText.trim()) {
-      Alert.alert('Error', 'Masukkan teks terlebih dahulu');
+      Alert.alert(t('quranPractice.error'), t('quranPractice.enterTextFirst'));
       return;
     }
 
@@ -319,9 +340,8 @@ export default function QuranPracticeScreen() {
       clearTimeout(recordingTimer.current);
     }
 
-    if (recording) {
-      await recording.stopAndUnloadAsync();
-      setRecording(null);
+    if (audioRecorder.isRecording) {
+      await audioRecorder.stop();
     }
 
     setIsRecording(false);
@@ -346,113 +366,115 @@ export default function QuranPracticeScreen() {
     return (
       <View className="flex-1 bg-white dark:bg-gray-900 items-center justify-center">
         <ActivityIndicator size="large" color="#0d9488" />
-        <Text className="text-gray-600 dark:text-gray-400 mt-4">Memeriksa fitur...</Text>
+        <Text className="text-gray-600 dark:text-gray-400 mt-4">{t('quranPractice.checkingFeature')}</Text>
       </View>
     );
   }
 
   if (!modelDownloaded) {
     return (
-      <ScrollView className="flex-1 bg-white dark:bg-gray-900">
-        <View className="px-4 pt-16 pb-6">
-          <View className="items-center mb-8">
-            <View className="w-20 h-20 bg-teal-600 dark:bg-teal-700 rounded-full items-center justify-center mb-4 shadow-lg">
-              <IconSymbol size={40} name="mic" color="#FFFFFF" />
-            </View>
-            <Text className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-              Latihan Baca Quran
-            </Text>
-            <Text className="text-center text-gray-600 dark:text-gray-400">
-              Latih bacaan Quran dengan bantuan AI
-            </Text>
-          </View>
-
-          <LinearGradient
-            colors={colorScheme === 'dark' ? ['#115e59', '#134e4a'] : ['#0d9488', '#0f766e']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={{ borderRadius: 24, padding: 24, marginBottom: 24 }}
-          >
-            <View className="items-center">
-              <IconSymbol size={64} name="cloud-download" color="#FFFFFF" />
-              <Text className="text-white text-2xl font-bold mt-4 mb-2 text-center">
-                Download Fitur
-              </Text>
-              <Text className="text-teal-50 text-center mb-4">
-                Fitur ini memerlukan AI model untuk mengenali bacaan Quran Anda
-              </Text>
-              <View className="bg-white/20 rounded-xl p-3 w-full">
-                <Text className="text-white text-center font-semibold">
-                  Ukuran: {MODEL_SIZE_MB}MB
-                </Text>
+      <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={["top"]}>
+        <ScrollView>
+          <View className="p-4">
+            <View className="items-center mb-8">
+              <View className="w-20 h-20 bg-teal-600 dark:bg-teal-700 rounded-full items-center justify-center mb-4 shadow-lg">
+                <IconSymbol size={40} name="mic" color="#FFFFFF" />
               </View>
+              <Text className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                {t('quranPractice.title')}
+              </Text>
+              <Text className="text-center text-gray-600 dark:text-gray-400">
+                {t('quranPractice.description')}
+              </Text>
             </View>
-          </LinearGradient>
 
-          {isDownloading ? (
-            <View className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-md border border-gray-100 dark:border-gray-700 mb-6">
-              <Text className="text-lg font-bold text-gray-900 dark:text-white mb-4 text-center">
-                Mengunduh Patch Fitur...
-              </Text>
-              <View className="h-3 bg-gray-200 dark:bg-gray-700 rounded-full mb-3 overflow-hidden">
-                <View 
-                  className="h-full bg-teal-600 dark:bg-teal-500 rounded-full transition-all"
-                  style={{ width: `${downloadProgress}%` }}
-                />
-              </View>
-              <Text className="text-center text-teal-600 dark:text-teal-500 font-bold text-lg">
-                {downloadProgress}%
-              </Text>
-              <Text className="text-center text-gray-500 dark:text-gray-400 text-sm mt-2">
-                {(MODEL_SIZE_MB * downloadProgress / 100).toFixed(1)}MB / {MODEL_SIZE_MB}MB
-              </Text>
-            </View>
-          ) : (
-            <TouchableOpacity
-              onPress={downloadModel}
-              className="bg-teal-600 dark:bg-teal-700 rounded-2xl py-5 shadow-lg mb-6"
+            <LinearGradient
+              colors={colorScheme === 'dark' ? ['#115e59', '#134e4a'] : ['#0d9488', '#0f766e']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{ borderRadius: 24, padding: 24, marginBottom: 24 }}
             >
-              <View className="flex-row items-center justify-center">
-                <IconSymbol size={24} name="cloud-download" color="#FFFFFF" />
-                <Text className="text-white font-bold text-lg ml-2">
-                  Download Fitur ({MODEL_SIZE_MB}MB)
+              <View className="items-center">
+                <IconSymbol size={64} name="cloud-download" color="#FFFFFF" />
+                <Text className="text-white text-2xl font-bold mt-4 mb-2 text-center">
+                  {t('quranPractice.downloadFeature')}
+                </Text>
+                <Text className="text-teal-50 text-center mb-4">
+                  {t('quranPractice.featureRequirement')}
+                </Text>
+                <View className="bg-white/20 rounded-xl p-3 w-full">
+                  <Text className="text-white text-center font-semibold">
+                    {t('quranPractice.size')}: {MODEL_SIZE_MB}MB
+                  </Text>
+                </View>
+              </View>
+            </LinearGradient>
+
+            {isDownloading ? (
+              <View className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-md border border-gray-100 dark:border-gray-700 mb-6">
+                <Text className="text-lg font-bold text-gray-900 dark:text-white mb-4 text-center">
+                  {t('quranPractice.downloading')}
+                </Text>
+                <View className="h-3 bg-gray-200 dark:bg-gray-700 rounded-full mb-3 overflow-hidden">
+                  <View 
+                    className="h-full bg-teal-600 dark:bg-teal-500 rounded-full transition-all"
+                    style={{ width: `${downloadProgress}%` }}
+                  />
+                </View>
+                <Text className="text-center text-teal-600 dark:text-teal-500 font-bold text-lg">
+                  {downloadProgress}%
+                </Text>
+                <Text className="text-center text-gray-500 dark:text-gray-400 text-sm mt-2">
+                  {(MODEL_SIZE_MB * downloadProgress / 100).toFixed(1)}MB / {MODEL_SIZE_MB}MB
                 </Text>
               </View>
-            </TouchableOpacity>
-          )}
+            ) : (
+              <TouchableOpacity
+                onPress={downloadModel}
+                className="bg-teal-600 dark:bg-teal-700 rounded-2xl py-5 shadow-lg mb-6"
+              >
+                <View className="flex-row items-center justify-center">
+                  <IconSymbol size={24} name="cloud-download" color="#FFFFFF" />
+                  <Text className="text-white font-bold text-lg ml-2">
+                    {t('quranPractice.downloadButton')} ({MODEL_SIZE_MB}MB)
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            )}
 
-          <View className="bg-amber-50 dark:bg-amber-950 rounded-2xl p-6 border border-amber-500">
-            <View className="flex-row items-center mb-3">
-              <IconSymbol size={24} name="info" color="#F59E0B" />
-              <Text className="text-lg font-semibold text-gray-900 dark:text-white ml-2">
-                Catatan
+            <View className="bg-amber-50 dark:bg-amber-950 rounded-2xl p-6 border border-amber-500">
+              <View className="flex-row items-center mb-3">
+                <IconSymbol size={24} name="info" color="#F59E0B" />
+                <Text className="text-lg font-semibold text-gray-900 dark:text-white ml-2">
+                  {t('quranPractice.note')}
+                </Text>
+              </View>
+              <Text className="text-gray-700 dark:text-gray-300 leading-6">
+                {t('quranPractice.stableConnection')}{'\n'}
+                {t('quranPractice.dataUsage')} {MODEL_SIZE_MB}MB {t('quranPractice.dataLabel')}{'\n'}
+                {t('quranPractice.downloadOnce')}{'\n'}
+                {t('quranPractice.canDelete')}
               </Text>
             </View>
-            <Text className="text-gray-700 dark:text-gray-300 leading-6">
-              • Pastikan koneksi internet stabil{'\n'}
-              • Download menggunakan {MODEL_SIZE_MB}MB data{'\n'}
-              • Model hanya diunduh sekali{'\n'}
-              • Bisa dihapus kapan saja dari pengaturan
-            </Text>
           </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-white dark:bg-gray-900">
-      <ScrollView contentContainerStyle={{ flex: 1, padding: 16 }}>
+    <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={["top"]}>
+      <ScrollView className='flex-1 p-4'>
         <View>
           <View className="items-center mb-8">
             <View className="w-20 h-20 bg-teal-600 dark:bg-teal-700 rounded-full items-center justify-center mb-4 shadow-lg">
               <IconSymbol size={40} name="mic" color="#FFFFFF" />
             </View>
             <Text className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-              Latihan Baca Quran
+              {t('quranPractice.title')}
             </Text>
             <Text className="text-center text-gray-600 dark:text-gray-400">
-              Latih bacaan Quran dengan bantuan AI
+              {t('quranPractice.description')}
             </Text>
           </View>
 
@@ -460,31 +482,31 @@ export default function QuranPracticeScreen() {
             <View className="bg-blue-50 dark:bg-blue-950 rounded-2xl p-6 mb-6">
               <ActivityIndicator size="large" color="#0d9488" />
               <Text className="text-center text-gray-900 dark:text-white mt-4 font-semibold">
-                Memuat AI model...
+                {t('quranPractice.loadingModel')}
               </Text>
             </View>
           )}
 
           <View className="bg-teal-600 dark:bg-teal-700 rounded-3xl p-6 mb-6 shadow-lg">
             <Text className="text-white text-xl font-bold mb-3">
-              Cara Menggunakan
+              {t('quranPractice.howToUse')}
             </Text>
             <Text className="text-teal-50">
-              1. Ketik atau gunakan teks Quran{'\n'}
-              2. Tekan Mulai dan baca kata demi kata{'\n'}
-              3. Sistem akan otomatis mendeteksi setiap kata{'\n'}
-              4. Hijau = benar, Merah = salah
+              {t('quranPractice.step1')}{'\n'}
+              {t('quranPractice.step2')}{'\n'}
+              {t('quranPractice.step3')}{'\n'}
+              {t('quranPractice.step4')}
             </Text>
           </View>
 
           <View className="mb-6">
             <View className="flex-row items-center justify-between mb-3">
               <Text className="text-lg font-bold text-gray-900 dark:text-white">
-                Teks Quran
+                {t('quranPractice.quranText')}
               </Text>
               <TouchableOpacity onPress={deleteModel}>
                 <Text className="text-red-600 dark:text-red-500 text-sm">
-                  Hapus Model
+                  {t('quranPractice.deleteModel')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -492,7 +514,7 @@ export default function QuranPracticeScreen() {
               <TextInput
                 value={inputText}
                 onChangeText={setInputText}
-                placeholder="Masukkan teks Arab di sini..."
+                placeholder={t('quranPractice.inputPlaceholder')}
                 placeholderTextColor="#9CA3AF"
                 multiline
                 className="text-gray-900 dark:text-white text-lg min-h-24 text-right"
@@ -505,7 +527,7 @@ export default function QuranPracticeScreen() {
               disabled={isRecording}
             >
               <Text className={`text-teal-600 dark:text-teal-500 font-semibold ${isRecording ? 'opacity-50' : ''}`}>
-                Gunakan Contoh (Bismillah)
+                {t('quranPractice.useSample')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -514,7 +536,7 @@ export default function QuranPracticeScreen() {
             <View className="mb-6">
               <View className="flex-row items-center justify-between mb-3">
                 <Text className="text-lg font-bold text-gray-900 dark:text-white">
-                  Progress
+                  {t('quranPractice.progress')}
                 </Text>
                 <Text className="text-teal-600 dark:text-teal-500 font-bold">
                   {progress}%
@@ -570,17 +592,17 @@ export default function QuranPracticeScreen() {
                 <View className="items-center">
                   <IconSymbol size={64} name="check-circle" color="#FFFFFF" />
                   <Text className="text-white text-2xl font-bold mt-4">
-                    Sesi Selesai!
+                    {t('quranPractice.sessionComplete')}
                   </Text>
                   <View className="bg-white/20 rounded-xl p-6 w-full mt-4">
                     <Text className="text-white text-center text-lg mb-2">
-                      Skor Anda
+                      {t('quranPractice.yourScore')}
                     </Text>
                     <Text className="text-white text-center text-5xl font-bold">
                       {getScorePercentage()}%
                     </Text>
                     <Text className="text-teal-50 text-center mt-2">
-                      {score.correct} dari {score.total} kata benar
+                      {t('quranPractice.correctWords', { correct: score.correct, total: score.total })}
                     </Text>
                   </View>
                 </View>
@@ -591,19 +613,19 @@ export default function QuranPracticeScreen() {
           {!sessionComplete && words.length > 0 && (
             <View className="mb-6">
               <Text className="text-lg font-bold text-gray-900 dark:text-white mb-3">
-                Status
+                {t('quranPractice.status')}
               </Text>
               <View className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700">
                 <View className="flex-row items-center mb-3">
                   <View className={`w-3 h-3 rounded-full mr-3 ${isRecording ? 'bg-red-500 animate-pulse' : 'bg-gray-400'}`} />
                   <Text className="text-gray-900 dark:text-white font-semibold">
-                    {isRecording ? 'Mendengarkan...' : 'Siap'}
+                    {isRecording ? t('quranPractice.listening') : t('quranPractice.ready')}
                   </Text>
                 </View>
                 {isRecording && currentWordIndex < words.length && (
                   <View className="mt-3 bg-amber-50 dark:bg-amber-950 rounded-xl p-4">
                     <Text className="text-amber-900 dark:text-amber-100 font-semibold mb-2">
-                      Kata Saat Ini ({currentWordIndex + 1}/{words.length})
+                      {t('quranPractice.currentWord', { current: currentWordIndex + 1, total: words.length })}
                     </Text>
                     <Text className="text-3xl font-bold text-amber-600 dark:text-amber-400 text-right">
                       {words[currentWordIndex].text}
@@ -629,7 +651,7 @@ export default function QuranPracticeScreen() {
                   <View className="flex-row items-center justify-center">
                     <IconSymbol size={24} name="play-arrow" color="#FFFFFF" />
                     <Text className="text-white font-bold text-lg ml-2">
-                      Mulai
+                      {t('quranPractice.start')}
                     </Text>
                   </View>
                 </TouchableOpacity>
@@ -650,7 +672,7 @@ export default function QuranPracticeScreen() {
                 <View className="flex-row items-center justify-center">
                   <IconSymbol size={24} name="stop" color="#FFFFFF" />
                   <Text className="text-white font-bold text-lg ml-2">
-                    Berhenti
+                    {t('quranPractice.stop')}
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -661,11 +683,11 @@ export default function QuranPracticeScreen() {
             <View className="flex-row items-center mb-3">
               <IconSymbol size={24} name="info" color="#0d9488" />
               <Text className="text-lg font-semibold text-gray-900 dark:text-white ml-2">
-                Tips
+                {t('quranPractice.tips')}
               </Text>
             </View>
             <Text className="text-gray-700 dark:text-gray-300 leading-6">
-              Bacalah kata demi kata dengan jelas. Sistem akan otomatis mendeteksi dan memberikan feedback untuk setiap kata yang Anda ucapkan.
+              {t('quranPractice.tipsDescription')}
             </Text>
           </View>
         </View>

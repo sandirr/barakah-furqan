@@ -1,4 +1,6 @@
+import i18n from '@/i18n';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import moment from 'moment';
 
 export interface PrayerTime {
   name: string;
@@ -66,16 +68,29 @@ class PrayerTimesService {
   async getPrayerTimes(latitude: number, longitude: number): Promise<PrayerTimes> {
     try {
       const cached = await this.getCachedPrayerTimes();
-      const today = new Date().toDateString();
+      const today = moment().format('YYYY-MM-DD');
 
       if (cached && cached.date === today) {
+        this.fetchPrayerTimes(latitude, longitude)
+          .then(response => {
+            const prayerTimes: PrayerTimes = {
+              date: today,
+              hijriDate: `${response.data.date.hijri.date?.substring(0,2)} ${response.data.date.hijri.month.en} ${response.data.date.hijri.year} (${response.data.date.readable})`,
+              fajr: this.formatTime(response.data.timings.Fajr),
+              sunrise: this.formatTime(response.data.timings.Sunrise),
+              dhuhr: this.formatTime(response.data.timings.Dhuhr),
+              asr: this.formatTime(response.data.timings.Asr),
+              maghrib: this.formatTime(response.data.timings.Maghrib),
+              isha: this.formatTime(response.data.timings.Isha),
+            };
+            this.cachePrayerTimes(prayerTimes);
+          })
+          .catch(() => {});
         return cached;
       }
 
       const response = await this.fetchPrayerTimes(latitude, longitude);
       const data = response.data;
-
-      // console.log('Fetched prayer times from API:', data);
 
       const prayerTimes: PrayerTimes = {
         date: today,
@@ -100,6 +115,16 @@ class PrayerTimesService {
     }
   }
 
+  async getCachedPrayerTimes(): Promise<PrayerTimes | null> {
+    try {
+      const cached = await AsyncStorage.getItem(STORAGE_KEY);
+      return cached ? JSON.parse(cached) : null;
+    } catch (error) {
+      console.error('Error reading cached prayer times:', error);
+      return null;
+    }
+  }
+
   private formatTime(time: string): string {
     return time.split(' ')[0];
   }
@@ -115,32 +140,36 @@ class PrayerTimesService {
   }
 
   async getNextPrayer(times: PrayerTimes): Promise<{ name: string; time: string; timeUntil: string } | null> {
-    const now = new Date();
+    const now = moment();
     const prayers = this.getPrayerList(times);
 
     for (const prayer of prayers) {
-      const [hours, minutes] = prayer.time.split(':').map(Number);
-      const prayerTime = new Date();
-      prayerTime.setHours(hours, minutes, 0, 0);
-
-      if (prayerTime > now) {
-        const diff = prayerTime.getTime() - now.getTime();
-        const hoursUntil = Math.floor(diff / (1000 * 60 * 60));
-        const minutesUntil = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const prayerTime = moment(prayer.time, 'HH:mm');
+      
+      if (prayerTime.isAfter(now)) {
+        const duration = moment.duration(prayerTime.diff(now));
+        const hours = Math.floor(duration.asHours());
+        const minutes = duration.minutes();
+        
+        const hoursLabel = i18n.t('time.hours');
+        const minutesLabel = i18n.t('time.minutes');
         
         return {
           name: prayer.name,
           time: prayer.time,
-          timeUntil: hoursUntil > 0 ? `${hoursUntil}j ${minutesUntil}m` : `${minutesUntil}m`,
+          timeUntil: hours > 0 
+            ? `${hours}${hoursLabel} ${minutes}${minutesLabel}` 
+            : `${minutes}${minutesLabel}`,
         };
       }
     }
 
     const fajr = prayers[0];
+    
     return {
       name: fajr.name,
       time: fajr.time,
-      timeUntil: 'Besok',
+      timeUntil: i18n.t('time.tomorrow'),
     };
   }
 
@@ -149,16 +178,6 @@ class PrayerTimesService {
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(times));
     } catch (error) {
       console.error('Error caching prayer times:', error);
-    }
-  }
-
-  private async getCachedPrayerTimes(): Promise<PrayerTimes | null> {
-    try {
-      const cached = await AsyncStorage.getItem(STORAGE_KEY);
-      return cached ? JSON.parse(cached) : null;
-    } catch (error) {
-      console.error('Error reading cached prayer times:', error);
-      return null;
     }
   }
 }

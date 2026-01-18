@@ -55,10 +55,20 @@ export default function ShalatScreen() {
   const loadPrayerTimes = async () => {
     try {
       setError(null);
+      
+      const cached = await prayerTimesService.getCachedPrayerTimes();
+      if (cached && cached.date === new Date().toDateString()) {
+        setPrayerTimes(cached);
+        updateNextPrayer(cached);
+        setLoading(false);
+      }
+
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        setError(t('shalat.permissionDenied'));
-        setLoading(false);
+        if (!cached) {
+          setError(t('shalat.permissionDenied'));
+          setLoading(false);
+        }
         return;
       }
 
@@ -72,21 +82,18 @@ export default function ShalatScreen() {
       };
       setLocation(userLocation);
 
-      try {
-        const geocode = await Location.reverseGeocodeAsync({
-          latitude: userLocation.lat,
-          longitude: userLocation.lng,
-        });
-        
-        if (geocode && geocode.length > 0) {
-          const address = geocode[0];
-          const cityName = address.city || address.subregion || address.region || 'Lokasi Tidak Diketahui';
-          setLocationName(cityName);
-        }
-      } catch (geoError) {
-        console.log('Geocoding failed:', geoError);
-        setLocationName('');
-      }
+      Location.reverseGeocodeAsync({
+        latitude: userLocation.lat,
+        longitude: userLocation.lng,
+      })
+        .then(geocode => {
+          if (geocode && geocode.length > 0) {
+            const address = geocode[0];
+            const cityName = address.city || address.subregion || address.region || 'Lokasi Tidak Diketahui';
+            setLocationName(cityName);
+          }
+        })
+        .catch(err => console.log('Geocoding failed:', err));
 
       const times = await prayerTimesService.getPrayerTimes(
         userLocation.lat,
@@ -206,7 +213,7 @@ export default function ShalatScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-white dark:bg-gray-900">
+    <SafeAreaView className="flex-1 bg-green-600 dark:bg-green-700">
       <View className="p-4 bg-green-600 dark:bg-green-700">
         <View className="flex-row items-center mb-4">
           <TouchableOpacity onPress={() => router.back()} className="mr-3">
@@ -243,7 +250,7 @@ export default function ShalatScreen() {
       </View>
 
       <ScrollView
-        className="flex-1"
+        className="flex-1 bg-white dark:bg-gray-900"
         contentContainerStyle={{ padding: 16 }}
         showsVerticalScrollIndicator={false}
         refreshControl={

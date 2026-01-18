@@ -1,4 +1,5 @@
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
 import { router } from 'expo-router';
@@ -10,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 const COMPASS_SIZE = width * 0.7;
+const LOCATION_CACHE_KEY = '@barakah_furqan_last_location';
 
 export default function KiblatScreen() {
   const { t } = useTranslation();
@@ -26,7 +28,7 @@ export default function KiblatScreen() {
   const calibrationTimer = useRef<NodeJS.Timeout | any>('');
 
   useEffect(() => {
-    requestLocationPermission();
+    initializeScreen();
     return () => {
       Magnetometer.removeAllListeners();
       if (calibrationTimer.current) {
@@ -46,36 +48,76 @@ export default function KiblatScreen() {
     }
   }, [heading]);
 
-  const requestLocationPermission = async () => {
+  const initializeScreen = async () => {
     try {
+      const cachedLocation = await getCachedLocation();
+      
+      if (cachedLocation) {
+        setLocation(cachedLocation);
+        const qibla = calculateQiblaDirection(cachedLocation.lat, cachedLocation.lng);
+        setQiblaDirection(qibla);
+        await startCompass();
+        setLoading(false);
+      }
+
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        setError(t('kiblat.permissionDenied'));
-        setLoading(false);
+        if (!cachedLocation) {
+          setError(t('kiblat.permissionDenied'));
+          setLoading(false);
+        }
         return;
       }
 
       const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
+        accuracy: Location.Accuracy.Balanced,
       });
 
       const userLocation = {
         lat: location.coords.latitude,
         lng: location.coords.longitude,
       };
+      
       setLocation(userLocation);
+      await cacheLocation(userLocation);
 
-      const qibla = calculateQiblaDirection(
-        userLocation.lat,
-        userLocation.lng
-      );
+      const qibla = calculateQiblaDirection(userLocation.lat, userLocation.lng);
       setQiblaDirection(qibla);
 
-      await startCompass();
-      setLoading(false);
+      if (!cachedLocation) {
+        await startCompass();
+        setLoading(false);
+      }
     } catch (err) {
-      setError(t('kiblat.locationError'));
-      setLoading(false);
+      const cachedLocation = await getCachedLocation();
+      if (cachedLocation) {
+        setLocation(cachedLocation);
+        const qibla = calculateQiblaDirection(cachedLocation.lat, cachedLocation.lng);
+        setQiblaDirection(qibla);
+        await startCompass();
+        setLoading(false);
+      } else {
+        setError(t('kiblat.locationError'));
+        setLoading(false);
+      }
+    }
+  };
+
+  const getCachedLocation = async (): Promise<{ lat: number; lng: number } | null> => {
+    try {
+      const cached = await AsyncStorage.getItem(LOCATION_CACHE_KEY);
+      return cached ? JSON.parse(cached) : null;
+    } catch (error) {
+      console.error('Error reading cached location:', error);
+      return null;
+    }
+  };
+
+  const cacheLocation = async (location: { lat: number; lng: number }): Promise<void> => {
+    try {
+      await AsyncStorage.setItem(LOCATION_CACHE_KEY, JSON.stringify(location));
+    } catch (error) {
+      console.error('Error caching location:', error);
     }
   };
 
@@ -132,11 +174,6 @@ export default function KiblatScreen() {
         resolve();
       }, 3000);
     });
-  };
-
-  const getQiblaAngle = (): number => {
-    if (qiblaDirection === null) return 0;
-    return qiblaDirection - heading;
   };
 
   const getDistanceToQibla = (): string => {
@@ -200,7 +237,7 @@ export default function KiblatScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-white dark:bg-gray-900">
+    <SafeAreaView className="flex-1 bg-teal-600 dark:bg-teal-700">
       <View className="p-4 bg-teal-600 dark:bg-teal-700">
         <View className="flex-row items-center mb-4">
           <TouchableOpacity onPress={() => router.back()} className="mr-3">
@@ -216,7 +253,7 @@ export default function KiblatScreen() {
       </View>
 
       <ScrollView 
-        className="flex-1"
+        className="flex-1 bg-white dark:bg-gray-900"
         contentContainerStyle={{ padding: 16, alignItems: 'center' }}
         showsVerticalScrollIndicator={false}
       >

@@ -1,7 +1,7 @@
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Ayah, quranService, SurahDetail, Tafsir, Translation } from '@/services/quran.service';
-import { Audio } from 'expo-av';
+import { AudioSource, useAudioPlayer } from 'expo-audio';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -16,11 +16,13 @@ export default function SurahDetailScreen() {
   const flatListRef = useRef<FlatList>(null);
   const isAutoPlayingRef = useRef(false);
   const isScrollingRef = useRef(false);
+  const audioPlayer = useAudioPlayer();
+  
   const [surah, setSurah] = useState<SurahDetail | null>(null);
   const [translations, setTranslations] = useState<Translation[]>([]);
   const [tafsirs, setTafsirs] = useState<Tafsir[]>([]);
+  const [hasTranslation, setHasTranslation] = useState(true);
   const [loading, setLoading] = useState(true);
-  const [sound, setSound] = useState<Audio.Sound>();
   const [playingAyah, setPlayingAyah] = useState<number | null>(null);
   const [selectedTafsir, setSelectedTafsir] = useState<{ ayah: number; text: string } | null>(null);
   const [showTranslation, setShowTranslation] = useState(true);
@@ -32,30 +34,41 @@ export default function SurahDetailScreen() {
   useFocusEffect(
     useCallback(() => {
       return () => {
-        if (sound) {
-          sound.unloadAsync();
+        try {
+          if (audioPlayer.playing) {
+            audioPlayer.pause();
+          }
+        } catch (error) {
+          console.log('Cleanup error:', error);
         }
       };
-    }, [sound])
+    }, [audioPlayer])
   );
 
   useEffect(() => {
     if (id) {
       loadSurah(Number(id));
     }
-    return () => {
-      if (sound) {
-        sound.unloadAsync();
-      }
-    };
-  }, [id]);
+  }, [id, i18n.language]);
+
+  useEffect(() => {
+    if (audioPlayer.playing === false && audioPlayer.currentTime > 0 && isAutoPlayingRef.current && playingAyah) {
+      playNextAyah(playingAyah);
+    }
+  }, [audioPlayer.playing]);
 
   const loadSurah = async (surahNumber: number) => {
     try {
+      setLoading(true);
       const data = await quranService.getSurahWithMultipleEditions(surahNumber, i18n.language);
       setSurah(data.surah);
       setTranslations(data.translation);
       setTafsirs(data.tafsir);
+      setHasTranslation(data.hasTranslation);
+      
+      if (!data.hasTranslation) {
+        setShowTranslation(false);
+      }
     } catch (error) {
       console.error('Failed to load surah:', error);
     } finally {
@@ -112,19 +125,16 @@ export default function SurahDetailScreen() {
 
   const playAudio = async (ayahNumber: number, isAuto: boolean = false) => {
     try {
-      if (sound) {
-        await sound.unloadAsync();
-      }
+      const ayah = surah?.ayahs.find((a) => a.numberInSurah === ayahNumber);
+      if (!ayah?.audio) return;
 
-      if (playingAyah === ayahNumber && !isAuto) {
+      if (playingAyah === ayahNumber && !isAuto && audioPlayer.playing) {
+        audioPlayer.pause();
         setPlayingAyah(null);
         setIsAutoPlaying(false);
         isAutoPlayingRef.current = false;
         return;
       }
-
-      const ayah = surah?.ayahs.find((a) => a.numberInSurah === ayahNumber);
-      if (!ayah?.audio) return;
 
       if (!isAuto) {
         setIsAutoPlaying(true);
@@ -135,22 +145,8 @@ export default function SurahDetailScreen() {
         scrollToAyah(ayahNumber);
       }
 
-      const { sound: newSound } = await Audio.Sound.createAsync(
-        { uri: ayah.audio },
-        { shouldPlay: true }
-      );
-
-      newSound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && status.didJustFinish) {
-          if (isAutoPlayingRef.current) {
-            playNextAyah(ayahNumber);
-          } else {
-            setPlayingAyah(null);
-          }
-        }
-      });
-
-      setSound(newSound);
+      audioPlayer.replace({ uri: ayah.audio } as AudioSource);
+      audioPlayer.play();
       setPlayingAyah(ayahNumber);
     } catch (error) {
       console.error('Error playing audio:', error);
@@ -159,10 +155,8 @@ export default function SurahDetailScreen() {
     }
   };
 
-  const stopAudio = async () => {
-    if (sound) {
-      await sound.unloadAsync();
-    }
+  const stopAudio = () => {
+    audioPlayer.pause();
     setPlayingAyah(null);
     setIsAutoPlaying(false);
     isAutoPlayingRef.current = false;
@@ -238,7 +232,7 @@ export default function SurahDetailScreen() {
   const renderVerse = ({ item }: { item: Ayah }) => {
     const translation = translations.find((t) => t.numberInSurah === item.numberInSurah);
     const hasTafsir = tafsirs.some((t) => t.numberInSurah === item.numberInSurah);
-    const isPlaying = playingAyah === item.numberInSurah;
+    const isPlaying = playingAyah === item.numberInSurah && audioPlayer.playing;
     const sizes = getFontSize();
 
     return (
@@ -271,7 +265,7 @@ export default function SurahDetailScreen() {
           {item.text}
         </Text>
 
-        {showTranslation && translation && (
+        {hasTranslation && showTranslation && translation && (
           <View className="bg-emerald-50 dark:bg-gray-800 rounded-2xl p-4">
             <Text 
               className="text-gray-900 dark:text-white leading-6"
@@ -368,21 +362,23 @@ export default function SurahDetailScreen() {
               </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              onPress={() => setShowTranslation(!showTranslation)}
-              className="items-center"
-            >
-              <View className={`w-12 h-12 rounded-full items-center justify-center ${showTranslation ? 'bg-emerald-100 dark:bg-emerald-900' : 'bg-gray-100 dark:bg-gray-700'}`}>
-                <IconSymbol 
-                  size={24} 
-                  name="translate" 
-                  color={showTranslation ? '#059669' : '#6B7280'} 
-                />
-              </View>
-              <Text className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                {t('quran.translation')}
-              </Text>
-            </TouchableOpacity>
+            {hasTranslation && (
+              <TouchableOpacity
+                onPress={() => setShowTranslation(!showTranslation)}
+                className="items-center"
+              >
+                <View className={`w-12 h-12 rounded-full items-center justify-center ${showTranslation ? 'bg-emerald-100 dark:bg-emerald-900' : 'bg-gray-100 dark:bg-gray-700'}`}>
+                  <IconSymbol 
+                    size={24} 
+                    name="translate" 
+                    color={showTranslation ? '#059669' : '#6B7280'} 
+                  />
+                </View>
+                <Text className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                  {t('quran.translation')}
+                </Text>
+              </TouchableOpacity>
+            )}
 
             <TouchableOpacity
               onPress={cycleFontSize}
@@ -392,7 +388,7 @@ export default function SurahDetailScreen() {
                 <IconSymbol size={24} name="text-format" color="#6B7280" />
               </View>
               <Text className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                {fontSize === 'small' ? 'Kecil' : fontSize === 'medium' ? 'Sedang' : 'Besar'}
+                {fontSize === 'small' ? t('quran.small') : fontSize === 'medium' ? t('quran.medium') : t('quran.large')}
               </Text>
             </TouchableOpacity>
 
@@ -440,7 +436,7 @@ export default function SurahDetailScreen() {
         onRequestClose={() => setShowAyahPicker(false)}
       >
         <View className="flex-1 bg-black/50 justify-end">
-          <View className="bg-white dark:bg-gray-900 rounded-t-3xl" style={{ maxHeight: '70%' }}>
+          <View className="bg-white dark:bg-gray-900 rounded-t-3xl" style={{ maxHeight: '70%', marginBottom: insets.bottom }}>
             <View className="p-6 border-b border-gray-200 dark:border-gray-700">
               <View className="flex-row items-center justify-between">
                 <Text className="text-xl font-bold text-gray-900 dark:text-white">
@@ -478,7 +474,7 @@ export default function SurahDetailScreen() {
         onRequestClose={() => setSelectedTafsir(null)}
       >
         <View className="flex-1 bg-black/50 justify-end">
-          <View className="bg-white dark:bg-gray-900 rounded-t-3xl" style={{ maxHeight: '75%' }}>
+          <View className="bg-white dark:bg-gray-900 rounded-t-3xl" style={{ maxHeight: '75%', marginBottom: insets.bottom }}>
             <View className="p-6 border-b border-gray-200 dark:border-gray-700">
               <View className="flex-row items-center justify-between">
                 <Text className="text-xl font-bold text-gray-900 dark:text-white">
