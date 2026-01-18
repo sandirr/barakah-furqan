@@ -1,7 +1,7 @@
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Ayah, quranService, SurahDetail, Tafsir, Translation } from '@/services/quran.service';
-import { AudioSource, useAudioPlayer } from 'expo-audio';
+import { Audio } from 'expo-av';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -16,13 +16,13 @@ export default function SurahDetailScreen() {
   const flatListRef = useRef<FlatList>(null);
   const isAutoPlayingRef = useRef(false);
   const isScrollingRef = useRef(false);
-  const audioPlayer = useAudioPlayer();
   
   const [surah, setSurah] = useState<SurahDetail | null>(null);
   const [translations, setTranslations] = useState<Translation[]>([]);
   const [tafsirs, setTafsirs] = useState<Tafsir[]>([]);
   const [hasTranslation, setHasTranslation] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [sound, setSound] = useState<Audio.Sound>();
   const [playingAyah, setPlayingAyah] = useState<number | null>(null);
   const [selectedTafsir, setSelectedTafsir] = useState<{ ayah: number; text: string } | null>(null);
   const [showTranslation, setShowTranslation] = useState(true);
@@ -34,28 +34,23 @@ export default function SurahDetailScreen() {
   useFocusEffect(
     useCallback(() => {
       return () => {
-        try {
-          if (audioPlayer.playing) {
-            audioPlayer.pause();
-          }
-        } catch (error) {
-          console.log('Cleanup error:', error);
+        if (sound) {
+          sound.unloadAsync();
         }
       };
-    }, [audioPlayer])
+    }, [sound])
   );
 
   useEffect(() => {
     if (id) {
       loadSurah(Number(id));
     }
+    return () => {
+      if (sound) {
+        sound.unloadAsync();
+      }
+    };
   }, [id, i18n.language]);
-
-  useEffect(() => {
-    if (audioPlayer.playing === false && audioPlayer.currentTime > 0 && isAutoPlayingRef.current && playingAyah) {
-      playNextAyah(playingAyah);
-    }
-  }, [audioPlayer.playing]);
 
   const loadSurah = async (surahNumber: number) => {
     try {
@@ -125,16 +120,19 @@ export default function SurahDetailScreen() {
 
   const playAudio = async (ayahNumber: number, isAuto: boolean = false) => {
     try {
-      const ayah = surah?.ayahs.find((a) => a.numberInSurah === ayahNumber);
-      if (!ayah?.audio) return;
+      if (sound) {
+        await sound.unloadAsync();
+      }
 
-      if (playingAyah === ayahNumber && !isAuto && audioPlayer.playing) {
-        audioPlayer.pause();
+      if (playingAyah === ayahNumber && !isAuto) {
         setPlayingAyah(null);
         setIsAutoPlaying(false);
         isAutoPlayingRef.current = false;
         return;
       }
+
+      const ayah = surah?.ayahs.find((a) => a.numberInSurah === ayahNumber);
+      if (!ayah?.audio) return;
 
       if (!isAuto) {
         setIsAutoPlaying(true);
@@ -145,8 +143,22 @@ export default function SurahDetailScreen() {
         scrollToAyah(ayahNumber);
       }
 
-      audioPlayer.replace({ uri: ayah.audio } as AudioSource);
-      audioPlayer.play();
+      const { sound: newSound } = await Audio.Sound.createAsync(
+        { uri: ayah.audio },
+        { shouldPlay: true }
+      );
+
+      newSound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && status.didJustFinish) {
+          if (isAutoPlayingRef.current) {
+            playNextAyah(ayahNumber);
+          } else {
+            setPlayingAyah(null);
+          }
+        }
+      });
+
+      setSound(newSound);
       setPlayingAyah(ayahNumber);
     } catch (error) {
       console.error('Error playing audio:', error);
@@ -155,8 +167,10 @@ export default function SurahDetailScreen() {
     }
   };
 
-  const stopAudio = () => {
-    audioPlayer.pause();
+  const stopAudio = async () => {
+    if (sound) {
+      await sound.unloadAsync();
+    }
     setPlayingAyah(null);
     setIsAutoPlaying(false);
     isAutoPlayingRef.current = false;
@@ -197,6 +211,9 @@ export default function SurahDetailScreen() {
   const renderHeader = () => {
     if (!surah) return null;
 
+    const showBasmalah = surah.number !== 1 && surah.number !== 9;
+    const sizes = getFontSize();
+
     return (
       <View className="mb-6">
         <LinearGradient
@@ -225,6 +242,14 @@ export default function SurahDetailScreen() {
             </View>
           </View>
         </LinearGradient>
+
+        {showBasmalah && (
+          <View className="mt-6 rounded-2xl px-4">
+            <Text className="text-center text-gray-900 dark:text-white font-bold" style={{ fontSize: sizes.arabic }}>
+              بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ
+            </Text>
+          </View>
+        )}
       </View>
     );
   };
@@ -232,7 +257,7 @@ export default function SurahDetailScreen() {
   const renderVerse = ({ item }: { item: Ayah }) => {
     const translation = translations.find((t) => t.numberInSurah === item.numberInSurah);
     const hasTafsir = tafsirs.some((t) => t.numberInSurah === item.numberInSurah);
-    const isPlaying = playingAyah === item.numberInSurah && audioPlayer.playing;
+    const isPlaying = playingAyah === item.numberInSurah;
     const sizes = getFontSize();
 
     return (
@@ -297,7 +322,7 @@ export default function SurahDetailScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-white dark:bg-gray-900">
+    <SafeAreaView className="flex-1 bg-emerald-600 dark:bg-emerald-700">
       <View className="p-4 bg-emerald-600 dark:bg-emerald-700">
         <View className="flex-row items-center">
           <TouchableOpacity onPress={() => router.back()} className="mr-3">
@@ -314,31 +339,33 @@ export default function SurahDetailScreen() {
         </View>
       </View>
 
-      <FlatList
-        ref={flatListRef}
-        data={surah.ayahs}
-        renderItem={renderVerse}
-        keyExtractor={(item) => item.number.toString()}
-        ListHeaderComponent={renderHeader}
-        contentContainerStyle={{ padding: 16, paddingTop: 16, paddingBottom: 120 }}
-        showsVerticalScrollIndicator={false}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
-        initialNumToRender={10}
-        maxToRenderPerBatch={10}
-        windowSize={10}
-        removeClippedSubviews={false}
-        onScrollToIndexFailed={(info) => {
-          const wait = new Promise(resolve => setTimeout(resolve, 500));
-          wait.then(() => {
-            flatListRef.current?.scrollToIndex({ 
-              index: info.index, 
-              animated: true,
-              viewPosition: 0.2 
+      <View className='bg-white dark:bg-gray-900 flex-1'>
+        <FlatList
+          ref={flatListRef}
+          data={surah.ayahs}
+          renderItem={renderVerse}
+          keyExtractor={(item) => item.number.toString()}
+          ListHeaderComponent={renderHeader}
+          contentContainerStyle={{ padding: 16, paddingTop: 16, paddingBottom: 120 }}
+          showsVerticalScrollIndicator={false}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+          initialNumToRender={10}
+          maxToRenderPerBatch={10}
+          windowSize={10}
+          removeClippedSubviews={false}
+          onScrollToIndexFailed={(info) => {
+            const wait = new Promise(resolve => setTimeout(resolve, 500));
+            wait.then(() => {
+              flatListRef.current?.scrollToIndex({ 
+                index: info.index, 
+                animated: true,
+                viewPosition: 0.2 
+              });
             });
-          });
-        }}
-      />
+          }}
+        />
+      </View>
 
       <View className="absolute left-0 right-0 px-4 pb-4" style={{ bottom: insets.bottom }}>
         <View className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">

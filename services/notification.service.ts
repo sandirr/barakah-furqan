@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AudioSource, useAudioPlayer } from 'expo-audio';
+import { Audio } from 'expo-av';
 import * as Notifications from 'expo-notifications';
 import { PrayerTimes } from './prayer-times.service';
 
@@ -17,8 +17,7 @@ Notifications.setNotificationHandler({
 });
 
 class NotificationService {
-  private audioPlayer: ReturnType<typeof useAudioPlayer> | null = null;
-  private adhanSource: AudioSource = require('../assets/adzan.mp3');
+  private sound: Audio.Sound | null = null;
 
   async requestPermissions(): Promise<boolean> {
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
@@ -73,6 +72,8 @@ class NotificationService {
         },
         identifier,
       });
+
+      // console.log(`Scheduled ${prayerName} notification at ${prayerTime} with ID: ${notificationId}`);
     } catch (error) {
       console.error(`Failed to schedule ${prayerName} notification:`, error);
     }
@@ -91,7 +92,7 @@ class NotificationService {
           seconds: 2,
         },
       });
-      console.log('Test notification scheduled in 2 seconds');
+      // console.log('Test notification scheduled in 2 seconds');
     } catch (error) {
       console.error('Failed to schedule test notification:', error);
       throw error;
@@ -100,9 +101,10 @@ class NotificationService {
 
   async getScheduledNotifications(): Promise<Notifications.NotificationRequest[]> {
     const notifications = await Notifications.getAllScheduledNotificationsAsync();
-    notifications.forEach(notif => {
-      console.log(`- ${notif.identifier}:`, notif.trigger);
-    });
+    // console.log('Scheduled notifications:', notifications.length);
+    // notifications.forEach(notif => {
+    //   console.log(`- ${notif.identifier}:`, notif.trigger);
+    // });
     return notifications;
   }
 
@@ -115,28 +117,37 @@ class NotificationService {
       const isEnabled = await this.isAdhanEnabled();
       if (!isEnabled) return;
 
-      if (this.audioPlayer?.playing) {
-        this.audioPlayer.pause();
+      if (this.sound) {
+        await this.sound.unloadAsync();
       }
 
-      if (!this.audioPlayer) {
-        const { useAudioPlayer: createPlayer } = await import('expo-audio');
-        this.audioPlayer = createPlayer(this.adhanSource);
-      }
+      await Audio.setAudioModeAsync({
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: true,
+      });
 
-      this.audioPlayer.play();
+      const { sound } = await Audio.Sound.createAsync(
+        require('../assets/adzan.mp3'),
+        { shouldPlay: true, volume: 1.0 }
+      );
+
+      this.sound = sound;
+
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && status.didJustFinish) {
+          sound.unloadAsync();
+        }
+      });
     } catch (error) {
       console.error('Error playing adhan:', error);
     }
   }
 
   async stopAdhan(): Promise<void> {
-    try {
-      if (this.audioPlayer?.playing) {
-        this.audioPlayer.pause();
-      }
-    } catch (error) {
-      console.error('Error stopping adhan:', error);
+    if (this.sound) {
+      await this.sound.stopAsync();
+      await this.sound.unloadAsync();
+      this.sound = null;
     }
   }
 

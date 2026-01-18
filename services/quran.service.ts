@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const QURAN_API_BASE = 'https://api.alquran.cloud/v1';
-const CACHE_KEY_PREFIX = '@quran_cache_';
+const CACHE_KEY_PREFIX = '@barakah_quran_cache_';
 
 export interface Surah {
   number: number;
@@ -170,8 +170,10 @@ class QuranService {
         };
       } else {
         const [surahData, translationData, tafsirData] = data.data;
+
+        const filteredAyahs = this.filterBasmalah(surahData.ayahs, surahNumber);
         result = {
-          surah: surahData,
+          surah: { ...surahData, ayahs: filteredAyahs },
           translation: translationData.ayahs,
           tafsir: tafsirData.ayahs,
           hasTranslation: true,
@@ -225,6 +227,22 @@ class QuranService {
     } catch (error) {
       console.error('Error clearing cache:', error);
     }
+  }
+
+  private filterBasmalah(ayahs: any[], surahNumber: number): any[] {
+    if (surahNumber === 1 || surahNumber === 9) {
+      return ayahs;
+    }
+    if (ayahs.length > 0) {
+      const firstAyah = ayahs[0];
+      const basmalah = "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ";
+      
+      firstAyah.text = firstAyah.text
+        .replace(basmalah, '')
+        .trim();
+    }
+
+    return ayahs;
   }
 }
 

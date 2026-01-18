@@ -1,5 +1,6 @@
 import i18n from '@/i18n';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { PrayerTimes as AdhanPrayerTimes, CalculationMethod, Coordinates } from 'adhan';
 import moment from 'moment';
 
 export interface PrayerTime {
@@ -46,9 +47,49 @@ export interface PrayerTimesResponse {
 }
 
 const STORAGE_KEY = '@prayer_times';
-const CACHE_DURATION = 24 * 60 * 60 * 1000;
+const USE_OFFLINE_MODE_KEY = '@use_offline_prayer';
 
 class PrayerTimesService {
+  private useOfflineMode: boolean = false;
+
+  constructor() {
+    this.loadOfflinePreference();
+  }
+
+  private async loadOfflinePreference() {
+    try {
+      const pref = await AsyncStorage.getItem(USE_OFFLINE_MODE_KEY);
+      this.useOfflineMode = pref === 'true';
+    } catch (error) {
+      console.error('Error loading offline preference:', error);
+    }
+  }
+
+  async setOfflineMode(enabled: boolean) {
+    this.useOfflineMode = enabled;
+    await AsyncStorage.setItem(USE_OFFLINE_MODE_KEY, enabled.toString());
+  }
+
+  private calculateOfflinePrayerTimes(latitude: number, longitude: number): PrayerTimes {
+    const coordinates = new Coordinates(latitude, longitude);
+    const date = new Date();
+    const params = CalculationMethod.MuslimWorldLeague();
+    const prayerTimes = new AdhanPrayerTimes(coordinates, date, params);
+
+    const today = moment().format('YYYY-MM-DD');
+
+    return {
+      date: today,
+      hijriDate: moment().format('DD MMMM YYYY'),
+      fajr: moment(prayerTimes.fajr).format('HH:mm'),
+      sunrise: moment(prayerTimes.sunrise).format('HH:mm'),
+      dhuhr: moment(prayerTimes.dhuhr).format('HH:mm'),
+      asr: moment(prayerTimes.asr).format('HH:mm'),
+      maghrib: moment(prayerTimes.maghrib).format('HH:mm'),
+      isha: moment(prayerTimes.isha).format('HH:mm'),
+    };
+  }
+
   private async fetchPrayerTimes(latitude: number, longitude: number, method: number = 20): Promise<PrayerTimesResponse> {
     const today = new Date();
     const day = today.getDate();
@@ -57,7 +98,7 @@ class PrayerTimesService {
 
     const url = `https://api.aladhan.com/v1/timings/${day}-${month}-${year}?latitude=${latitude}&longitude=${longitude}&method=${method}`;
     
-    const response = await fetch(url);
+    const response = await fetch(url, { signal: AbortSignal.timeout(4000) });
     if (!response.ok) {
       throw new Error('Failed to fetch prayer times');
     }
@@ -66,6 +107,12 @@ class PrayerTimesService {
   }
 
   async getPrayerTimes(latitude: number, longitude: number): Promise<PrayerTimes> {
+    if (this.useOfflineMode) {
+      const offlineTimes = this.calculateOfflinePrayerTimes(latitude, longitude);
+      await this.cachePrayerTimes(offlineTimes);
+      return offlineTimes;
+    }
+
     try {
       const cached = await this.getCachedPrayerTimes();
       const today = moment().format('YYYY-MM-DD');
@@ -106,12 +153,15 @@ class PrayerTimesService {
       await this.cachePrayerTimes(prayerTimes);
       return prayerTimes;
     } catch (error) {
-      console.error('Error fetching prayer times:', error);
+      console.error('API failed, falling back to offline calculation:', error);
+      
       const cached = await this.getCachedPrayerTimes();
       if (cached) {
         return cached;
       }
-      throw error;
+
+      // return this.calculateOfflinePrayerTimes(latitude, longitude);
+      throw new Error('No data available');
     }
   }
 
