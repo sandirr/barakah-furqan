@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { settings } from '@/services/storage.service'; // MMKV
 import * as Localization from 'expo-localization';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
@@ -9,7 +9,7 @@ import id from './locales/id.json';
 import ms from './locales/ms.json';
 import ur from './locales/ur.json';
 
-const LANGUAGE_KEY = '@barakah_furqan:language';
+const LANGUAGE_KEY = 'barakah_furqan_app_language';
 
 const resources = {
   en: { translation: en },
@@ -19,19 +19,35 @@ const resources = {
   ar: { translation: ar },
 };
 
-const deviceLanguage = Localization.getLocales()[0]?.languageCode || 'en';
+const SUPPORTED_LANGUAGES = ['en', 'id', 'ms', 'ur', 'ar'];
 
-const initI18n = async () => {
-  let savedLanguage = deviceLanguage;
+// Get device language and validate against supported languages
+const getDeviceLanguage = (): string => {
+  const deviceLang = Localization.getLocales()[0]?.languageCode || 'en';
   
-  try {
-    const storedLanguage = await AsyncStorage.getItem(LANGUAGE_KEY);
-    if (storedLanguage) {
-      savedLanguage = storedLanguage;
-    }
-  } catch (error) {
-    console.error('Failed to load language from storage:', error);
+  // Check if device language is supported
+  if (SUPPORTED_LANGUAGES.includes(deviceLang)) {
+    return deviceLang;
   }
+  
+  // Fallback logic untuk bahasa serumpun
+  const baseLang = deviceLang.split('-')[0];
+  if (SUPPORTED_LANGUAGES.includes(baseLang)) {
+    return baseLang;
+  }
+  
+  // Default fallback
+  return 'en';
+};
+
+const initI18n = () => {
+  const deviceLanguage = getDeviceLanguage();
+  
+  // Get saved language from MMKV (synchronous!)
+  const storedLanguage = settings.getString(LANGUAGE_KEY);
+  const savedLanguage = (storedLanguage && SUPPORTED_LANGUAGES.includes(storedLanguage)) 
+    ? storedLanguage 
+    : deviceLanguage;
 
   i18n
     .use(initReactI18next)
@@ -48,12 +64,9 @@ const initI18n = async () => {
       },
     });
 
-  i18n.on('languageChanged', async (lng) => {
-    try {
-      await AsyncStorage.setItem(LANGUAGE_KEY, lng);
-    } catch (error) {
-      console.error('Failed to save language:', error);
-    }
+  // Save language when changed (synchronous!)
+  i18n.on('languageChanged', (lng) => {
+    settings.set(LANGUAGE_KEY, lng);
   });
 };
 

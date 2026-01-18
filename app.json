@@ -47,15 +47,6 @@
           }
         }
       ],
-      [
-        "react-native-vosk",
-        {
-          "models": [
-            "assets/model-ar"
-          ],
-          "iOSMicrophonePermission": "Nous avons besoin d'accéder à votre microphone"
-        }
-      ],
       "expo-audio"
     ],
     "experiments": {

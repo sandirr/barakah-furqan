@@ -33,18 +33,18 @@ export default function TabLayout() {
       <Tabs.Screen
         name="quran-practice"
         options={{
-          href: null,
+          // href: null,
           title: t('navigation.quranPractice'),
           tabBarIcon: ({ color }) => <IconSymbol size={24} name="mic" color={color} />,
         }}
       />
-      <Tabs.Screen
+      {/* <Tabs.Screen
         name="read-arab"
         options={{
           href: null,
           tabBarIcon: ({ color }) => <IconSymbol size={24} name="mic" color={color} />,
         }}
-      />
+      /> */}
       <Tabs.Screen
         name="settings"
         options={{
