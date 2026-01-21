@@ -1,50 +1,137 @@
-# Welcome to your Expo app 👋
+# Maternify App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+## 📋 Prerequisites
 
-## Get started
+Before running this project, make sure you have the following installed:
 
-1. Install dependencies
+- [Node.js](https://nodejs.org/) (v16 or later)
+- [npm](https://www.npmjs.com/) or [Yarn](https://yarnpkg.com/)
+- [Expo CLI](https://docs.expo.dev/get-started/installation/)
+- [Android Studio](https://developer.android.com/studio) (for Android development)
+- [Xcode](https://developer.apple.com/xcode/) (for iOS development, macOS only)
 
-   ```bash
-   npm install
-   ```
+## 🚀 Getting Started
 
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+### 1. Clone the repository
 
 ```bash
-npm run reset-project
+git clone <repository-url>
+cd maternify-app
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### 2. Install dependencies
 
-## Learn more
+```bash
+npm install
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+### 3. Run the application
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+#### Development with Expo
 
-## Join the community
+```bash
+# Start the Expo development server
+npm start
 
-Join our community of developers creating universal apps.
+# Run on Android
+npm run android
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+# Run on iOS
+npm run ios
+
+# Run on web
+npm run web
+```
+
+### 🏗️ Expo Prebuild
+
+This project uses Expo's managed workflow with prebuild for native code generation. The `android/` and `ios/` folders are generated automatically and should **not be edited directly** unless absolutely necessary.
+
+```bash
+# Generate native folders (run when needed)
+expo prebuild
+
+# Clean and regenerate native folders
+expo prebuild --clean
+```
+
+**⚠️ Important Notes:**
+- **Avoid editing native folders**: The `android/` and `ios/` directories are auto-generated
+- **Use app.json**: Configure native settings through `app.json` or app config files
+- **Plugins over manual edits**: Use Expo config plugins for native modifications
+- **Clean builds**: Use `expo prebuild --clean` if you encounter native issues
+
+**When you might need prebuild:**
+- After adding new native dependencies
+- When native configuration changes
+- Before building for production
+- When switching between development profiles
+
+### 📦 Installing Libraries
+
+When adding new libraries to your Expo project, always use the Expo CLI to ensure compatibility and proper configuration:
+
+```bash
+# ✅ RECOMMENDED: Use Expo CLI to install libraries
+npx expo install <package-name>
+
+# Examples:
+npx expo install react-native-gesture-handler
+npx expo install @react-navigation/native
+npx expo install expo-camera
+```
+
+**Why use `expo install` instead of `npm install`?**
+- **Version compatibility**: Ensures the package version is compatible with your Expo SDK
+- **Automatic configuration**: Some packages are automatically configured
+- **Peer dependencies**: Installs compatible versions of peer dependencies
+- **Native dependencies**: Handles native dependencies properly
+
+**For packages that require native code:**
+```bash
+# Install the package
+npx expo install react-native-some-native-package
+
+# Run prebuild to generate native code
+expo prebuild
+
+# For development builds
+npx expo run:android
+npx expo run:ios
+```
+
+**⚠️ Important:**
+- Always use `npx expo install` for React Native and Expo-compatible packages
+- Use `npm install` only for pure JavaScript packages that don't require native code
+- Run `expo prebuild` after installing packages with native dependencies
+- Check the [Expo SDK documentation](https://docs.expo.dev/) for package compatibility
+
+## 📦 Creating a release
+
+### 1. Update version and native build numbers
+- Edit `app.config.ts` and update:
+    - `version` (semantic app version)
+    - `ios.buildNumber` (increment for each iOS release)
+    - `android.versionCode` (increment for each Android release)
+    - `android.versionName` (optional human-readable Android version)
+- Regenerate native projects:
+    ```sh
+    npx expo prebuild
+    ```
+
+### 2. iOS — build and upload (Xcode)
+1. Ensure you have appropriate Apple Developer signing credentials (provisioning profile, distribution certificate).
+2. Open the generated workspace:
+    ```sh
+    open ios/<YourApp>.xcworkspace
+    ```
+3. Click on Product → Archive. Make sure to set the device to "Any iOS Device (arm64)".
+4. After the archive is completed, in the archive window, click on Distribute App.
+
+
+- Notes:
+    - Increment `ios.buildNumber` for each upload.
+    - Use Xcode’s automatic signing or configure manual signing with your team’s provisioning profiles.
+
+### 3. Android — build and upload (Android Studio / Gradle)
+TBA
