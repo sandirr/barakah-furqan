@@ -1,12 +1,25 @@
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Geolocation from '@react-native-community/geolocation';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as Location from 'expo-location';
 import { router } from 'expo-router';
-import { Magnetometer } from 'expo-sensors';
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Animated, Dimensions, ScrollView, Text, TouchableOpacity, useColorScheme, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Animated,
+  Dimensions,
+  PermissionsAndroid,
+  Platform,
+  RefreshControl,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  useColorScheme,
+  View
+} from 'react-native';
+import CompassHeading from 'react-native-compass-heading';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
@@ -18,88 +31,164 @@ export default function KiblatScreen() {
   const colorScheme = useColorScheme();
   const [heading, setHeading] = useState(0);
   const [qiblaDirection, setQiblaDirection] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [calibrating, setCalibrating] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const rotation = new Animated.Value(0);
+  const [isUsingCache, setIsUsingCache] = useState(false);
+  const [updatingLocation, setUpdatingLocation] = useState(false);
+  
+  const compassRotation = useRef(new Animated.Value(0)).current;
   const headingStableCount = useRef(0);
   const lastHeading = useRef(0);
-  const calibrationTimer = useRef<NodeJS.Timeout | any>('');
+  const calibrationTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const compassStarted = useRef(false); // Track compass state
 
   useEffect(() => {
     initializeScreen();
     return () => {
-      Magnetometer.removeAllListeners();
+      console.log('🛑 Stopping compass...');
+      CompassHeading.stop();
+      compassStarted.current = false;
       if (calibrationTimer.current) {
         clearTimeout(calibrationTimer.current);
       }
     };
   }, []);
 
+  // Animate compass rotation smoothly
   useEffect(() => {
-    if (heading !== null && heading !== 0) {
-      Animated.spring(rotation, {
-        toValue: -heading,
-        useNativeDriver: true,
-        tension: 10,
-        friction: 8,
-      }).start();
-    }
+    Animated.spring(compassRotation, {
+      toValue: -heading,
+      useNativeDriver: true,
+      tension: 10,
+      friction: 8,
+    }).start();
   }, [heading]);
+
+  const requestLocationPermission = async (): Promise<boolean> => {
+    if (Platform.OS === 'ios') {
+      return true;
+    }
+
+    try {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
+      );
+      return granted === PermissionsAndroid.RESULTS.GRANTED;
+    } catch (err) {
+      console.error('Permission error:', err);
+      return false;
+    }
+  };
+
+  const getCurrentLocation = (): Promise<{ lat: number; lng: number }> => {
+    return new Promise((resolve, reject) => {
+      Geolocation.getCurrentPosition(
+        (position) => {
+          resolve({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+        },
+        (error) => {
+          reject(error);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 20000,
+          maximumAge: 10000,
+        }
+      );
+    });
+  };
 
   const initializeScreen = async () => {
     try {
+      console.log('🚀 Initializing screen...');
+      
+      // Step 1: Load cache immediately
       const cachedLocation = await getCachedLocation();
       
       if (cachedLocation) {
+        console.log('✓ Using cached location:', cachedLocation);
         setLocation(cachedLocation);
         const qibla = calculateQiblaDirection(cachedLocation.lat, cachedLocation.lng);
         setQiblaDirection(qibla);
+        setIsUsingCache(true);
+        
+        // Start compass immediately with cached data
         await startCompass();
-        setLoading(false);
+      } else {
+        console.log('⚠️ No cached location found');
+        setLoading(true);
       }
 
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        if (!cachedLocation) {
+      // Step 2: Update location in background
+      await updateLocationInBackground();
+
+    } catch (err) {
+      console.error('❌ Initialize error:', err);
+      setError(t('kiblat.locationError'));
+      setLoading(false);
+    }
+  };
+
+  const updateLocationInBackground = async () => {
+    try {
+      setUpdatingLocation(true);
+
+      // Request permission
+      const hasPermission = await requestLocationPermission();
+      
+      if (!hasPermission) {
+        console.log('⛔ Location permission denied');
+        setUpdatingLocation(false);
+        
+        if (!location) {
           setError(t('kiblat.permissionDenied'));
           setLoading(false);
         }
         return;
       }
 
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
-
-      const userLocation = {
-        lat: location.coords.latitude,
-        lng: location.coords.longitude,
-      };
+      // Get current location
+      const userLocation = await getCurrentLocation();
+      console.log('📍 Current location:', userLocation);
       
-      setLocation(userLocation);
-      await cacheLocation(userLocation);
+      // Check if location changed significantly (more than ~100m)
+      const locationChanged = !location || 
+        Math.abs(userLocation.lat - location.lat) > 0.001 ||
+        Math.abs(userLocation.lng - location.lng) > 0.001;
 
-      const qibla = calculateQiblaDirection(userLocation.lat, userLocation.lng);
-      setQiblaDirection(qibla);
+      if (locationChanged) {
+        console.log('✓ Location updated');
+        setLocation(userLocation);
+        await cacheLocation(userLocation);
 
-      if (!cachedLocation) {
+        const qibla = calculateQiblaDirection(userLocation.lat, userLocation.lng);
+        console.log('🧭 Qibla direction:', qibla);
+        setQiblaDirection(qibla);
+        setIsUsingCache(false);
+      } else {
+        console.log('✓ Location unchanged, keeping cache');
+      }
+
+      // Start compass if not started yet
+      if (loading || !compassStarted.current) {
         await startCompass();
         setLoading(false);
       }
+
     } catch (err) {
-      const cachedLocation = await getCachedLocation();
-      if (cachedLocation) {
-        setLocation(cachedLocation);
-        const qibla = calculateQiblaDirection(cachedLocation.lat, cachedLocation.lng);
-        setQiblaDirection(qibla);
-        await startCompass();
-        setLoading(false);
-      } else {
+      console.error('❌ Background location update error:', err);
+      
+      if (!location) {
         setError(t('kiblat.locationError'));
         setLoading(false);
       }
+    } finally {
+      setUpdatingLocation(false);
     }
   };
 
@@ -108,7 +197,7 @@ export default function KiblatScreen() {
       const cached = await AsyncStorage.getItem(LOCATION_CACHE_KEY);
       return cached ? JSON.parse(cached) : null;
     } catch (error) {
-      console.error('Error reading cached location:', error);
+      console.error('Cache get error:', error);
       return null;
     }
   };
@@ -117,7 +206,7 @@ export default function KiblatScreen() {
     try {
       await AsyncStorage.setItem(LOCATION_CACHE_KEY, JSON.stringify(location));
     } catch (error) {
-      console.error('Error caching location:', error);
+      console.error('Cache save error:', error);
     }
   };
 
@@ -125,54 +214,88 @@ export default function KiblatScreen() {
     const kaabaLat = 21.4225;
     const kaabaLng = 39.8262;
 
-    const latRad = (lat * Math.PI) / 180;
-    const lngRad = (lng * Math.PI) / 180;
-    const kaabaLatRad = (kaabaLat * Math.PI) / 180;
-    const kaabaLngRad = (kaabaLng * Math.PI) / 180;
+    const PI = Math.PI;
+    const latk = (kaabaLat * PI) / 180.0;
+    const longk = (kaabaLng * PI) / 180.0;
+    const phi = (lat * PI) / 180.0;
+    const lambda = (lng * PI) / 180.0;
 
-    const dLng = kaabaLngRad - lngRad;
+    let qiblad = (180.0 / PI) * Math.atan2(
+      Math.sin(longk - lambda),
+      Math.cos(phi) * Math.tan(latk) - Math.sin(phi) * Math.cos(longk - lambda)
+    );
 
-    const y = Math.sin(dLng) * Math.cos(kaabaLatRad);
-    const x =
-      Math.cos(latRad) * Math.sin(kaabaLatRad) -
-      Math.sin(latRad) * Math.cos(kaabaLatRad) * Math.cos(dLng);
-
-    let bearing = Math.atan2(y, x);
-    bearing = (bearing * 180) / Math.PI;
-    bearing = (bearing + 360) % 360;
-
-    return bearing;
+    qiblad = (qiblad + 360) % 360;
+    return qiblad;
   };
 
   const startCompass = async () => {
-    return new Promise<void>((resolve) => {
-      Magnetometer.setUpdateInterval(100);
+    return new Promise<void>((resolve, reject) => {
+      console.log('🧭 Starting compass...');
       
-      Magnetometer.addListener((data) => {
-        const { x, y } = data;
-        let angle = Math.atan2(y, x) * (180 / Math.PI);
-        angle = (angle + 360) % 360;
+      // Stop compass first if already running
+      if (compassStarted.current) {
+        console.log('⚠️ Compass already running, stopping first...');
+        CompassHeading.stop();
+        compassStarted.current = false;
+      }
 
-        const headingDiff = Math.abs(angle - lastHeading.current);
-        
-        if (headingDiff < 5) {
-          headingStableCount.current += 1;
-        } else {
-          headingStableCount.current = 0;
-        }
+      const degree_update_rate = 3;
 
-        if (headingStableCount.current >= 5 && calibrating) {
+      try {
+        CompassHeading.start(degree_update_rate, (data: any) => {
+          console.log('📡 Compass data received:', data);
+          
+          if (!data || typeof data !== 'object') {
+            console.error('❌ Invalid compass data:', data);
+            return;
+          }
+
+          const { heading: compassHeading, accuracy } = data;
+          
+          if (typeof compassHeading !== 'number') {
+            console.error('❌ Invalid heading value:', compassHeading);
+            return;
+          }
+
+          console.log(`🧭 Heading: ${compassHeading.toFixed(2)}°, Accuracy: ${accuracy}`);
+
+          const headingDiff = Math.abs(compassHeading - lastHeading.current);
+          
+          if (headingDiff < 5) {
+            headingStableCount.current += 1;
+          } else {
+            headingStableCount.current = 0;
+          }
+
+          if (headingStableCount.current >= 5 && calibrating) {
+            console.log('✓ Compass calibrated');
+            setCalibrating(false);
+          }
+
+          lastHeading.current = compassHeading;
+          setHeading(compassHeading);
+        });
+
+        compassStarted.current = true;
+        console.log('✓ Compass started successfully');
+
+        calibrationTimer.current = setTimeout(() => {
+          console.log('⏱️ Calibration timeout');
           setCalibrating(false);
-        }
+          resolve();
+        }, 3000);
 
-        lastHeading.current = angle;
-        setHeading(angle);
-      });
-
-      calibrationTimer.current = setTimeout(() => {
-        setCalibrating(false);
-        resolve();
-      }, 3000);
+      } catch (err) {
+        console.error('❌ Compass start error:', err);
+        compassStarted.current = false;
+        Alert.alert(
+          'Compass Error',
+          'Failed to start compass. Please check if your device has a compass sensor.',
+          [{ text: 'OK' }]
+        );
+        reject(err);
+      }
     });
   };
 
@@ -199,7 +322,21 @@ export default function KiblatScreen() {
     return distance.toFixed(0);
   };
 
-  if (loading) {
+  const refreshLocation = async () => {
+    console.log('🔄 Refreshing location...');
+    setIsUsingCache(false);
+    setUpdatingLocation(true);
+    
+    // Stop and restart compass
+    if (compassStarted.current) {
+      CompassHeading.stop();
+      compassStarted.current = false;
+    }
+    
+    await updateLocationInBackground();
+  };
+
+  if (loading && !location) {
     return (
       <View className="flex-1 bg-white dark:bg-gray-900 items-center justify-center">
         <ActivityIndicator size="large" color="#14B8A6" />
@@ -208,10 +345,10 @@ export default function KiblatScreen() {
     );
   }
 
-  if (error) {
+  if (error && !location) {
     return (
-      <View className="flex-1 bg-white dark:bg-gray-900">
-        <View className="px-4 pt-16 pb-4 bg-teal-600 dark:bg-teal-700">
+      <SafeAreaView className="flex-1 bg-teal-600 dark:bg-teal-700">
+        <View className="p-4 bg-teal-600 dark:bg-teal-700">
           <View className="flex-row items-center mb-4">
             <TouchableOpacity onPress={() => router.back()} className="mr-3">
               <IconSymbol size={24} name="arrow-back" color="#FFFFFF" />
@@ -225,14 +362,20 @@ export default function KiblatScreen() {
           </Text>
         </View>
         
-        <View className="flex-1 items-center justify-center px-6">
+        <View className="flex-1 items-center justify-center px-6 bg-white dark:bg-gray-900">
           <IconSymbol size={64} name="error" color="#DC2626" />
           <Text className="text-red-600 dark:text-red-400 text-center mt-4 text-lg font-bold">{error}</Text>
           <Text className="text-gray-500 dark:text-gray-400 text-center mt-2">
             {t('kiblat.errorDescription')}
           </Text>
+          <TouchableOpacity
+            onPress={initializeScreen}
+            className="mt-6 bg-teal-600 py-3 px-8 rounded-xl"
+          >
+            <Text className="text-white font-semibold">{t('common.retry')}</Text>
+          </TouchableOpacity>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
@@ -246,6 +389,17 @@ export default function KiblatScreen() {
           <Text className="text-2xl font-bold text-white flex-1">
             {t('kiblat.title')}
           </Text>
+          <TouchableOpacity
+            onPress={refreshLocation}
+            className="bg-white/20 rounded-full p-2"
+            disabled={updatingLocation}
+          >
+            {updatingLocation ? (
+              <ActivityIndicator size={21} color="#FFFFFF" />
+            ) : (
+              <IconSymbol size={20} name="refresh" color="#FFFFFF" />
+            )}
+          </TouchableOpacity>
         </View>
         <Text className="text-teal-50 text-sm">
           {t('kiblat.description')}
@@ -256,17 +410,16 @@ export default function KiblatScreen() {
         className="flex-1 bg-white dark:bg-gray-900"
         contentContainerStyle={{ padding: 16, alignItems: 'center' }}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={updatingLocation} onRefresh={refreshLocation} colors={['#14B8A6']} />
+        }
       >
-        {calibrating && (
-          <View className="w-full mb-4 bg-amber-50 dark:bg-amber-950 rounded-2xl p-4 border border-amber-200 dark:border-amber-800">
-            <View className="flex-row items-center">
-              <ActivityIndicator size="small" color="#D97706" />
-              <Text className="text-amber-800 dark:text-amber-200 ml-3 font-medium">
-                {t('kiblat.calibrating')}
-              </Text>
-            </View>
-          </View>
-        )}
+        {/* Debug info - Remove in production */}
+        <View className="w-full mb-4 bg-gray-100 dark:bg-gray-800 rounded-lg p-3">
+          <Text className="text-xs text-gray-600 dark:text-gray-400 font-mono">
+            Heading: {heading.toFixed(2)}° | Qibla: {qiblaDirection?.toFixed(2)}° | Compass: {compassStarted.current ? '✓' : '✗'}
+          </Text>
+        </View>
 
         <View className="w-full mb-6">
           <View className="flex-row gap-3">
@@ -304,6 +457,7 @@ export default function KiblatScreen() {
           </View>
         </View>
 
+        {/* Compass Container */}
         <View className="relative items-center justify-center mb-6" style={{ width: COMPASS_SIZE, height: COMPASS_SIZE }}>
           <View className="absolute w-full h-full bg-white dark:bg-gray-800 rounded-full shadow-lg border-4 border-gray-100 dark:border-gray-700" />
           
@@ -311,10 +465,12 @@ export default function KiblatScreen() {
             style={{
               width: COMPASS_SIZE - 20,
               height: COMPASS_SIZE - 20,
-              transform: [{ rotate: rotation.interpolate({
-                inputRange: [0, 360],
-                outputRange: ['0deg', '360deg'],
-              })}],
+              transform: [{ 
+                rotate: compassRotation.interpolate({
+                  inputRange: [-360, 0],
+                  outputRange: ['-360deg', '0deg'],
+                })
+              }],
             }}
             className="absolute items-center justify-center"
           >
@@ -331,52 +487,97 @@ export default function KiblatScreen() {
                 </View>
               </View>
 
-              <View className="absolute top-1/2 -mt-3 left-2">
+              <View className="absolute top-1/2 -mt-4 left-2">
                 <View className="bg-gray-400 dark:bg-gray-600 rounded-full justify-center items-center h-8 w-8">
                   <Text className="text-white font-bold text-xs">W</Text>
                 </View>
               </View>
 
-              <View className="absolute top-1/2 -mt-3 right-2">
+              <View className="absolute top-1/2 -mt-4 right-2">
                 <View className="bg-gray-400 dark:bg-gray-600 rounded-full justify-center items-center h-8 w-8">
                   <Text className="text-white font-bold text-xs">E</Text>
                 </View>
               </View>
+
+              {[...Array(36)].map((_, i) => {
+                const angle = i * 10;
+                const isMainDirection = angle % 90 === 0;
+                const radius = (COMPASS_SIZE - 20) / 2 - 45;
+                const x = Math.sin((angle * Math.PI) / 180) * radius;
+                const y = -Math.cos((angle * Math.PI) / 180) * radius;
+                
+                if (isMainDirection) return null;
+                
+                return (
+                  <View
+                    key={i}
+                    style={{
+                      position: 'absolute',
+                      left: '50%',
+                      top: '50%',
+                      marginLeft: x - 2,
+                      marginTop: y - 2,
+                    }}
+                  >
+                    <View className="w-1 h-1 bg-gray-300 dark:bg-gray-600 rounded-full" />
+                  </View>
+                );
+              })}
             </View>
           </Animated.View>
 
-          <Animated.View
-            style={{
-              position: 'absolute',
-              transform: [
-                { rotate: `${qiblaDirection}deg` },
-              ],
-            }}
-          >
-            <View className="items-center" style={{ width: 50, marginTop: -(COMPASS_SIZE - 20) / 2 + 40 }}>
-              <View className="w-12 h-12 bg-teal-600 dark:bg-teal-700 rounded-full items-center justify-center shadow-lg">
-                <IconSymbol size={24} name="mosque" color="#FFFFFF" />
+          {qiblaDirection !== null && (
+            <View
+              style={{
+                position: 'absolute',
+                transform: [
+                  { rotate: `${qiblaDirection - heading}deg` }
+                ],
+              }}
+            >
+              <View className="items-center" style={{ width: 50, marginTop: -(COMPASS_SIZE - 20) / 2 + 40 }}>
+                <View className="w-12 h-12 bg-teal-600 dark:bg-teal-700 rounded-full items-center justify-center shadow-lg">
+                  <IconSymbol size={24} name="mosque" color="#FFFFFF" />
+                </View>
+                <View className="w-1 h-12 bg-teal-600 dark:bg-teal-700 mt-1" />
+                <View 
+                  style={{
+                    width: 0,
+                    height: 0,
+                    backgroundColor: 'transparent',
+                    borderStyle: 'solid',
+                    borderLeftWidth: 8,
+                    borderRightWidth: 8,
+                    borderTopWidth: 12,
+                    borderLeftColor: 'transparent',
+                    borderRightColor: 'transparent',
+                    borderTopColor: '#0d9488',
+                  }}
+                />
               </View>
-              <View className="w-1 h-12 bg-teal-600 dark:bg-teal-700 mt-1" />
-              <View 
-                style={{
-                  width: 0,
-                  height: 0,
-                  backgroundColor: 'transparent',
-                  borderStyle: 'solid',
-                  borderLeftWidth: 8,
-                  borderRightWidth: 8,
-                  borderTopWidth: 12,
-                  borderLeftColor: 'transparent',
-                  borderRightColor: 'transparent',
-                  borderTopColor: '#0d9488',
-                }}
-              />
             </View>
-          </Animated.View>
+          )}
 
           <View className="absolute bg-white dark:bg-gray-700 w-3 h-3 rounded-full border-2 border-teal-600" />
         </View>
+
+        {location && (
+          <View className="w-full mb-6 bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+            <View className="flex-row items-center mb-2">
+              <View className="w-10 h-10 bg-teal-100 dark:bg-teal-900 rounded-full items-center justify-center mr-3">
+                <IconSymbol size={20} name="my-location" color="#0d9488" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-sm text-gray-500 dark:text-gray-400 mb-1">
+                  {t('shalat.location')}
+                </Text>
+                <Text className="text-sm font-mono text-gray-900 dark:text-white">
+                  {location.lat.toFixed(6)}, {location.lng.toFixed(6)}
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
 
         <View className="w-full">
           <LinearGradient

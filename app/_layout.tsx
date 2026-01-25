@@ -66,7 +66,7 @@ export default function RootLayout() {
           
           // Download in background without blocking UI
           quranService.downloadAllSurahsForLanguage(currentLanguage, (progress) => {
-            console.log(`Download progress: ${progress.current}/${progress.total} - ${progress.currentSurah}`);
+            // console.log(`Download progress: ${progress.current}/${progress.total} - ${progress.currentSurah}`);
           }).catch(error => {
             console.error('Background download failed:', error);
           });

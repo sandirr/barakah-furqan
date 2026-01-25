@@ -260,6 +260,9 @@ export default function SurahDetailScreen() {
     const isPlaying = playingAyah === item.numberInSurah;
     const sizes = getFontSize();
 
+    const removeBasmalah = surah && surah.number !== 1 && surah.number !== 9 && item.numberInSurah === 1;
+    const verseText = removeBasmalah ? quranService.filterBasmalah(item.text) : item.text;
+
     return (
       <View className={`mb-6 ${isPlaying ? 'bg-emerald-50 dark:bg-emerald-950' : ''} !rounded-xl !overflow-hidden p-2`}>
         <View className="flex-row items-center mb-3">
@@ -287,7 +290,7 @@ export default function SurahDetailScreen() {
           className="text-right text-gray-900 dark:text-white mb-4 leading-loose font-bold"
           style={{ fontSize: sizes.arabic }}
         >
-          {item.text}
+          {verseText}
         </Text>
 
         {hasTranslation && showTranslation && translation && (

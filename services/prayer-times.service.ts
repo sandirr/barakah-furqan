@@ -1,6 +1,5 @@
 import i18n from '@/i18n';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { PrayerTimes as AdhanPrayerTimes, CalculationMethod, Coordinates } from 'adhan';
 import moment from 'moment';
 
 export interface PrayerTime {
@@ -46,96 +45,70 @@ export interface PrayerTimesResponse {
   };
 }
 
-const STORAGE_KEY = '@prayer_times';
-const USE_OFFLINE_MODE_KEY = '@use_offline_prayer';
+const STORAGE_KEY = '@barakah_furqan_prayer_times';
 
 class PrayerTimesService {
-  private useOfflineMode: boolean = false;
-
-  constructor() {
-    this.loadOfflinePreference();
-  }
-
-  private async loadOfflinePreference() {
-    try {
-      const pref = await AsyncStorage.getItem(USE_OFFLINE_MODE_KEY);
-      this.useOfflineMode = pref === 'true';
-    } catch (error) {
-      console.error('Error loading offline preference:', error);
-    }
-  }
-
-  async setOfflineMode(enabled: boolean) {
-    this.useOfflineMode = enabled;
-    await AsyncStorage.setItem(USE_OFFLINE_MODE_KEY, enabled.toString());
-  }
-
-  private calculateOfflinePrayerTimes(latitude: number, longitude: number): PrayerTimes {
-    const coordinates = new Coordinates(latitude, longitude);
-    const date = new Date();
-    const params = CalculationMethod.MuslimWorldLeague();
-    const prayerTimes = new AdhanPrayerTimes(coordinates, date, params);
-
-    const today = moment().format('YYYY-MM-DD');
-
-    return {
-      date: today,
-      hijriDate: moment().format('DD MMMM YYYY'),
-      fajr: moment(prayerTimes.fajr).format('HH:mm'),
-      sunrise: moment(prayerTimes.sunrise).format('HH:mm'),
-      dhuhr: moment(prayerTimes.dhuhr).format('HH:mm'),
-      asr: moment(prayerTimes.asr).format('HH:mm'),
-      maghrib: moment(prayerTimes.maghrib).format('HH:mm'),
-      isha: moment(prayerTimes.isha).format('HH:mm'),
-    };
-  }
-
   private async fetchPrayerTimes(latitude: number, longitude: number, method: number = 20): Promise<PrayerTimesResponse> {
-    const today = new Date();
-    const day = today.getDate();
-    const month = today.getMonth() + 1;
-    const year = today.getFullYear();
-
-    const url = `https://api.aladhan.com/v1/timings/${day}-${month}-${year}?latitude=${latitude}&longitude=${longitude}&method=${method}`;
+    const dateStr = moment().format('DD-MM-YYYY');
+    const url = `https://api.aladhan.com/v1/timings/${dateStr}?latitude=${latitude}&longitude=${longitude}&method=${method}`;
     
-    const response = await fetch(url, { signal: AbortSignal.timeout(4000) });
-    if (!response.ok) {
-      throw new Error('Failed to fetch prayer times');
-    }
-
-    return response.json();
-  }
-
-  async getPrayerTimes(latitude: number, longitude: number): Promise<PrayerTimes> {
-    if (this.useOfflineMode) {
-      const offlineTimes = this.calculateOfflinePrayerTimes(latitude, longitude);
-      await this.cachePrayerTimes(offlineTimes);
-      return offlineTimes;
-    }
-
     try {
-      const cached = await this.getCachedPrayerTimes();
-      const today = moment().format('YYYY-MM-DD');
-
-      if (cached && cached.date === today) {
-        this.fetchPrayerTimes(latitude, longitude)
-          .then(response => {
-            const prayerTimes: PrayerTimes = {
-              date: today,
-              hijriDate: `${response.data.date.hijri.date?.substring(0,2)} ${response.data.date.hijri.month.en} ${response.data.date.hijri.year} (${response.data.date.readable})`,
-              fajr: this.formatTime(response.data.timings.Fajr),
-              sunrise: this.formatTime(response.data.timings.Sunrise),
-              dhuhr: this.formatTime(response.data.timings.Dhuhr),
-              asr: this.formatTime(response.data.timings.Asr),
-              maghrib: this.formatTime(response.data.timings.Maghrib),
-              isha: this.formatTime(response.data.timings.Isha),
-            };
-            this.cachePrayerTimes(prayerTimes);
-          })
-          .catch(() => {});
-        return cached;
+      const fetchPromise = fetch(url, { 
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Request timeout')), 20000);
+      });
+      
+      const response = await Promise.race([fetchPromise, timeoutPromise]) as Response;
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
+      const data = await response.json();
+      
+      if (data.code !== 200) {
+        throw new Error(`API error: ${data.status}`);
+      }
+      
+      if (!data.data || !data.data.timings) {
+        throw new Error('Invalid API response');
+      }
+      
+      return data;
+    } catch (error: any) {
+      if (error.message === 'Request timeout') {
+        throw new Error('Koneksi timeout. Coba lagi.');
+      }
+      
+      if (error.message.includes('Network request failed')) {
+        throw new Error('Tidak ada koneksi internet.');
+      }
+      
+      throw error;
+    }
+  }
+
+  async getPrayerTimes(latitude: number, longitude: number, skipCache: boolean = false): Promise<PrayerTimes> {
+    const today = moment().format('YYYY-MM-DD');
+
+    try {
+      // Check cache first (unless skipCache is true for refresh)
+      if (!skipCache) {
+        const cached = await this.getCachedPrayerTimes();
+        if (cached && cached.date === today) {
+          return cached;
+        }
+      }
+
+      // Fetch from API
       const response = await this.fetchPrayerTimes(latitude, longitude);
       const data = response.data;
 
@@ -150,27 +123,53 @@ class PrayerTimesService {
         isha: this.formatTime(data.timings.Isha),
       };
 
+      // Cache the result
       await this.cachePrayerTimes(prayerTimes);
-      return prayerTimes;
-    } catch (error) {
-      console.error('API failed, falling back to offline calculation:', error);
       
+      return prayerTimes;
+    } catch (error: any) {
+      // Try cache as fallback
       const cached = await this.getCachedPrayerTimes();
       if (cached) {
         return cached;
       }
 
-      // return this.calculateOfflinePrayerTimes(latitude, longitude);
-      throw new Error('No data available');
+      // More specific error messages
+      if (error.message.includes('timeout')) {
+        throw new Error('Koneksi timeout. Coba lagi dalam beberapa saat.');
+      }
+      
+      if (error.message.includes('Network request failed')) {
+        throw new Error('Tidak ada koneksi internet. Periksa koneksi Anda.');
+      }
+      
+      if (error.message.includes('HTTP error')) {
+        throw new Error('Server error. Coba lagi nanti.');
+      }
+
+      throw new Error('Gagal mengambil jadwal shalat.');
+    }
+  }
+
+  // Fetch silently in background without throwing errors
+  async fetchPrayerTimesInBackground(latitude: number, longitude: number): Promise<PrayerTimes | null> {
+    try {
+      const times = await this.getPrayerTimes(latitude, longitude, true);
+      return times;
+    } catch (error) {
+      console.log('Background fetch failed (non-critical):', error);
+      return null;
     }
   }
 
   async getCachedPrayerTimes(): Promise<PrayerTimes | null> {
     try {
       const cached = await AsyncStorage.getItem(STORAGE_KEY);
-      return cached ? JSON.parse(cached) : null;
+      if (!cached) return null;
+      
+      const parsed = JSON.parse(cached);
+      return parsed;
     } catch (error) {
-      console.error('Error reading cached prayer times:', error);
       return null;
     }
   }
@@ -214,6 +213,7 @@ class PrayerTimesService {
       }
     }
 
+    // All prayers have passed, next is Fajr tomorrow
     const fajr = prayers[0];
     
     return {
@@ -227,7 +227,64 @@ class PrayerTimesService {
     try {
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(times));
     } catch (error) {
-      console.error('Error caching prayer times:', error);
+      // Silent fail
+    }
+  }
+
+  async clearCache(): Promise<void> {
+    try {
+      await AsyncStorage.removeItem(STORAGE_KEY);
+    } catch (error) {
+      // Silent fail
+    }
+  }
+
+  // Test connection method for debugging
+  async testConnection(): Promise<{ success: boolean; message: string; details?: any }> {
+    try {
+      const testLat = 21.4225;
+      const testLng = 39.8262;
+      const dateStr = moment().format('DD-MM-YYYY');
+      
+      const url = `https://api.aladhan.com/v1/timings/${dateStr}?latitude=${testLat}&longitude=${testLng}&method=4`;
+      
+      const fetchPromise = fetch(url, {
+        headers: {
+          'Accept': 'application/json',
+        }
+      });
+      
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Request timeout')), 10000);
+      });
+      
+      const response = await Promise.race([fetchPromise, timeoutPromise]) as Response;
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        return {
+          success: false,
+          message: `HTTP Error: ${response.status}`,
+          details: errorText
+        };
+      }
+      
+      const data = await response.json();
+      
+      return {
+        success: true,
+        message: 'API connection successful',
+        details: data
+      };
+      
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.message,
+        details: {
+          name: error.name
+        }
+      };
     }
   }
 }

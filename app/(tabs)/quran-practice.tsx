@@ -7,9 +7,10 @@ import {
 } from 'expo-audio';
 import * as FileSystem from 'expo-file-system/legacy';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { initWhisper, WhisperContext } from 'whisper.rn';
 
@@ -46,9 +47,10 @@ const recordingOptions: RecordingOptions = {
   },
 };
 
-export default function QuranPracticeScreen() {
+export default function TilawahScreen() {
   const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
+  const params = useLocalSearchParams();
   const audioRecorder = useAudioRecorder(recordingOptions);
   
   const [inputText, setInputText] = useState('');
@@ -65,13 +67,15 @@ export default function QuranPracticeScreen() {
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [checkingModel, setCheckingModel] = useState(true);
+  
+  const [hasMicPermission, setHasMicPermission] = useState(false);
+  const [checkingPermission, setCheckingPermission] = useState(true);
 
   const recordingTimer = useRef<NodeJS.Timeout | any>(null);
   const modelPath = `${FileSystem.documentDirectory}${MODEL_NAME}`;
 
   useEffect(() => {
-    checkModelExists();
-    requestPermissions();
+    initializeScreen();
     
     return () => {
       if (audioRecorder?.isRecording) {
@@ -86,11 +90,44 @@ export default function QuranPracticeScreen() {
     };
   }, []);
 
+  useEffect(() => {
+    if (params.text && typeof params.text === 'string') {
+      setInputText(params.text);
+    }
+  }, [params.text]);
+
+  const initializeScreen = async () => {
+    await checkPermissions();
+    await checkModelExists();
+  };
+
+  const checkPermissions = async () => {
+    setCheckingPermission(true);
+    try {
+      const { granted } = await AudioModule.getRecordingPermissionsAsync();
+      setHasMicPermission(granted);
+    } catch (error) {
+      console.error('Error checking permissions:', error);
+      setHasMicPermission(false);
+    } finally {
+      setCheckingPermission(false);
+    }
+  };
+
   const requestPermissions = async () => {
     try {
       const { granted } = await AudioModule.requestRecordingPermissionsAsync();
+      setHasMicPermission(granted);
+      
       if (!granted) {
-        Alert.alert(t('quranPractice.error'), t('quranPractice.micPermissionRequired'));
+        Alert.alert(
+          t('tilawah.permissionRequired'),
+          t('tilawah.permissionRequiredDesc'),
+          [
+            { text: t('common.cancel'), style: 'cancel' },
+            { text: t('tilawah.openSettings'), onPress: () => Linking.openSettings() }
+          ]
+        );
       }
     } catch (error) {
       console.error('Error requesting permissions:', error);
@@ -129,10 +166,10 @@ export default function QuranPracticeScreen() {
       
       if (result && result.uri) {
         setModelDownloaded(true);
-        Alert.alert(t('quranPractice.success'), t('quranPractice.featureReady'));
+        Alert.alert(t('tilawah.success'), t('tilawah.featureReady'));
       }
     } catch (error) {
-      Alert.alert(t('quranPractice.error'), t('quranPractice.downloadFailed'));
+      Alert.alert(t('tilawah.error'), t('tilawah.downloadFailed'));
       console.error('Download error:', error);
     } finally {
       setIsDownloading(false);
@@ -142,12 +179,12 @@ export default function QuranPracticeScreen() {
 
   const deleteModel = async () => {
     Alert.alert(
-      t('quranPractice.deleteModel'),
-      t('quranPractice.deleteConfirmation', { size: MODEL_SIZE_MB }),
+      t('tilawah.deleteModel'),
+      t('tilawah.deleteConfirmation', { size: MODEL_SIZE_MB }),
       [
-        { text: t('quranPractice.cancel'), style: 'cancel' },
+        { text: t('tilawah.cancel'), style: 'cancel' },
         {
-          text: t('quranPractice.delete'),
+          text: t('tilawah.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -157,9 +194,9 @@ export default function QuranPracticeScreen() {
                 await whisperContext.release();
                 setWhisperContext(null);
               }
-              Alert.alert(t('quranPractice.success'), t('quranPractice.modelDeleted'));
+              Alert.alert(t('tilawah.success'), t('tilawah.modelDeleted'));
             } catch (error) {
-              Alert.alert(t('quranPractice.error'), t('quranPractice.deleteFailed'));
+              Alert.alert(t('tilawah.error'), t('tilawah.deleteFailed'));
             }
           },
         },
@@ -170,7 +207,7 @@ export default function QuranPracticeScreen() {
   const initializeWhisper = async () => {
     if (whisperContext) return;
     if (!modelDownloaded) {
-      Alert.alert(t('quranPractice.error'), t('quranPractice.modelNotDownloaded'));
+      Alert.alert(t('tilawah.error'), t('tilawah.modelNotDownloaded'));
       return;
     }
 
@@ -185,12 +222,12 @@ export default function QuranPracticeScreen() {
     } catch (error) {
       console.error('Error initializing Whisper:', error);
       Alert.alert(
-        t('quranPractice.initializationError'),
-        t('quranPractice.initializationFailed'),
+        t('tilawah.initializationError'),
+        t('tilawah.initializationFailed'),
         [
-          { text: t('quranPractice.ok') },
+          { text: t('tilawah.ok') },
           { 
-            text: t('quranPractice.deleteModel'), 
+            text: t('tilawah.deleteModel'), 
             onPress: deleteModel,
             style: 'destructive' 
           }
@@ -215,7 +252,7 @@ export default function QuranPracticeScreen() {
       }, RECORDING_INTERVAL);
     } catch (error) {
       console.error('Failed to start recording:', error);
-      Alert.alert(t('quranPractice.error'), t('quranPractice.recordingFailed'));
+      Alert.alert(t('tilawah.error'), t('tilawah.recordingFailed'));
     }
   };
 
@@ -228,7 +265,7 @@ export default function QuranPracticeScreen() {
 
     try {
       const uri = await audioRecorder.stop();
-      return null;
+      return uri;
     } catch (error) {
       console.error('Failed to stop recording:', error);
       return null;
@@ -311,7 +348,7 @@ export default function QuranPracticeScreen() {
 
   const startSession = async () => {
     if (!inputText.trim()) {
-      Alert.alert(t('quranPractice.error'), t('quranPractice.enterTextFirst'));
+      Alert.alert(t('tilawah.error'), t('tilawah.enterTextFirst'));
       return;
     }
 
@@ -352,7 +389,6 @@ export default function QuranPracticeScreen() {
     setWords([]);
     setCurrentWordIndex(0);
     setProgress(0);
-    setInputText('');
     setSessionComplete(false);
     setScore({ correct: 0, total: 0 });
   };
@@ -362,12 +398,62 @@ export default function QuranPracticeScreen() {
     return Math.round((score.correct / score.total) * 100);
   };
 
-  if (checkingModel) {
+  if (checkingPermission || checkingModel) {
     return (
       <View className="flex-1 bg-white dark:bg-gray-900 items-center justify-center">
         <ActivityIndicator size="large" color="#0d9488" />
-        <Text className="text-gray-600 dark:text-gray-400 mt-4">{t('quranPractice.checkingFeature')}</Text>
+        <Text className="text-gray-600 dark:text-gray-400 mt-4">{t('tilawah.checking')}</Text>
       </View>
+    );
+  }
+
+  if (!hasMicPermission) {
+    return (
+      <SafeAreaView className="flex-1 bg-teal-600 dark:bg-teal-700">
+        <View className="p-4 bg-teal-600 dark:bg-teal-700">
+          <Text className="text-2xl font-bold text-white">
+            {t('tilawah.title')}
+          </Text>
+        </View>
+        
+        <View className="flex-1 items-center justify-center px-4 bg-white dark:bg-gray-900">
+          <IconSymbol size={64} name="mic-off" color="#dc2626" />
+          <Text className="text-gray-900 dark:text-white text-center mt-4 text-xl font-bold">
+            {t('tilawah.permissionRequired')}
+          </Text>
+          
+          <View className="w-full mt-6">
+            <View className="p-4 rounded-xl bg-red-50 dark:bg-red-950">
+              <View className="flex-row items-center mb-2">
+                <IconSymbol size={24} name="cancel" color="#dc2626" />
+                <Text className="ml-2 font-semibold text-red-700 dark:text-red-300">
+                  {t('tilawah.microphonePermission')}
+                </Text>
+              </View>
+              <Text className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                {t('tilawah.microphonePermissionDesc')}
+              </Text>
+              <TouchableOpacity
+                onPress={requestPermissions}
+                className="bg-red-600 py-2 px-4 rounded-lg"
+              >
+                <Text className="text-white font-semibold text-center">
+                  {t('tilawah.enableMicrophone')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            onPress={checkPermissions}
+            className="mt-8 bg-teal-600 py-3 px-8 rounded-xl"
+          >
+            <Text className="text-white font-semibold text-center">
+              {t('tilawah.checkAgain')}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
     );
   }
 
@@ -381,10 +467,10 @@ export default function QuranPracticeScreen() {
                 <IconSymbol size={40} name="mic" color="#FFFFFF" />
               </View>
               <Text className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                {t('quranPractice.title')}
+                {t('tilawah.title')}
               </Text>
               <Text className="text-center text-gray-600 dark:text-gray-400">
-                {t('quranPractice.description')}
+                {t('tilawah.description')}
               </Text>
             </View>
 
@@ -397,14 +483,14 @@ export default function QuranPracticeScreen() {
               <View className="items-center">
                 <IconSymbol size={64} name="cloud-download" color="#FFFFFF" />
                 <Text className="text-white text-2xl font-bold mt-4 mb-2 text-center">
-                  {t('quranPractice.downloadFeature')}
+                  {t('tilawah.downloadFeature')}
                 </Text>
                 <Text className="text-teal-50 text-center mb-4">
-                  {t('quranPractice.featureRequirement')}
+                  {t('tilawah.featureRequirement')}
                 </Text>
                 <View className="bg-white/20 rounded-xl p-3 w-full">
                   <Text className="text-white text-center font-semibold">
-                    {t('quranPractice.size')}: {MODEL_SIZE_MB}MB
+                    {t('tilawah.size')}: {MODEL_SIZE_MB}MB
                   </Text>
                 </View>
               </View>
@@ -413,7 +499,7 @@ export default function QuranPracticeScreen() {
             {isDownloading ? (
               <View className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-md border border-gray-100 dark:border-gray-700 mb-6">
                 <Text className="text-lg font-bold text-gray-900 dark:text-white mb-4 text-center">
-                  {t('quranPractice.downloading')}
+                  {t('tilawah.downloading')}
                 </Text>
                 <View className="h-3 bg-gray-200 dark:bg-gray-700 rounded-full mb-3 overflow-hidden">
                   <View 
@@ -436,7 +522,7 @@ export default function QuranPracticeScreen() {
                 <View className="flex-row items-center justify-center">
                   <IconSymbol size={24} name="cloud-download" color="#FFFFFF" />
                   <Text className="text-white font-bold text-lg ml-2">
-                    {t('quranPractice.downloadButton')} ({MODEL_SIZE_MB}MB)
+                    {t('tilawah.downloadButton')} ({MODEL_SIZE_MB}MB)
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -446,14 +532,14 @@ export default function QuranPracticeScreen() {
               <View className="flex-row items-center mb-3">
                 <IconSymbol size={24} name="info" color="#F59E0B" />
                 <Text className="text-lg font-semibold text-gray-900 dark:text-white ml-2">
-                  {t('quranPractice.note')}
+                  {t('tilawah.note')}
                 </Text>
               </View>
               <Text className="text-gray-700 dark:text-gray-300 leading-6">
-                {t('quranPractice.stableConnection')}{'\n'}
-                {t('quranPractice.dataUsage')} {MODEL_SIZE_MB}MB {t('quranPractice.dataLabel')}{'\n'}
-                {t('quranPractice.downloadOnce')}{'\n'}
-                {t('quranPractice.canDelete')}
+                {t('tilawah.stableConnection')}{'\n'}
+                {t('tilawah.dataUsage')} {MODEL_SIZE_MB}MB {t('tilawah.dataLabel')}{'\n'}
+                {t('tilawah.downloadOnce')}{'\n'}
+                {t('tilawah.canDelete')}
               </Text>
             </View>
           </View>
@@ -470,10 +556,10 @@ export default function QuranPracticeScreen() {
             <IconSymbol size={40} name="mic" color="#FFFFFF" />
           </View>
           <Text className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            {t('quranPractice.title')}
+            {t('tilawah.title')}
           </Text>
           <Text className="text-center text-gray-600 dark:text-gray-400">
-            {t('quranPractice.description')}
+            {t('tilawah.description')}
           </Text>
         </View>
 
@@ -481,31 +567,30 @@ export default function QuranPracticeScreen() {
           <View className="bg-blue-50 dark:bg-blue-950 rounded-2xl p-6 mb-6">
             <ActivityIndicator size="large" color="#0d9488" />
             <Text className="text-center text-gray-900 dark:text-white mt-4 font-semibold">
-              {t('quranPractice.loadingModel')}
+              {t('tilawah.loadingModel')}
             </Text>
           </View>
         )}
 
         <View className="bg-teal-600 dark:bg-teal-700 rounded-3xl p-6 mb-6 shadow-lg">
           <Text className="text-white text-xl font-bold mb-3">
-            {t('quranPractice.howToUse')}
+            {t('tilawah.howToUse')}
           </Text>
           <Text className="text-teal-50">
-            {t('quranPractice.step1')}{'\n'}
-            {t('quranPractice.step2')}{'\n'}
-            {t('quranPractice.step3')}{'\n'}
-            {t('quranPractice.step4')}
+            {t('tilawah.step1')}{'\n'}
+            {t('tilawah.step2')}{'\n'}
+            {t('tilawah.step3')}
           </Text>
         </View>
 
         <View className="mb-6">
           <View className="flex-row items-center justify-between mb-3">
             <Text className="text-lg font-bold text-gray-900 dark:text-white">
-              {t('quranPractice.quranText')}
+              {t('tilawah.quranText')}
             </Text>
             <TouchableOpacity onPress={deleteModel}>
               <Text className="text-red-600 dark:text-red-500 text-sm">
-                {t('quranPractice.deleteModel')}
+                {t('tilawah.deleteModel')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -513,7 +598,7 @@ export default function QuranPracticeScreen() {
             <TextInput
               value={inputText}
               onChangeText={setInputText}
-              placeholder={t('quranPractice.inputPlaceholder')}
+              placeholder={t('tilawah.inputPlaceholder')}
               placeholderTextColor="#9CA3AF"
               multiline
               className="text-gray-900 dark:text-white text-lg min-h-24 text-right"
@@ -526,7 +611,7 @@ export default function QuranPracticeScreen() {
             disabled={isRecording}
           >
             <Text className={`text-teal-600 dark:text-teal-500 font-semibold ${isRecording ? 'opacity-50' : ''}`}>
-              {t('quranPractice.useSample')}
+              {t('tilawah.useSample')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -535,7 +620,7 @@ export default function QuranPracticeScreen() {
           <View className="mb-6">
             <View className="flex-row items-center justify-between mb-3">
               <Text className="text-lg font-bold text-gray-900 dark:text-white">
-                {t('quranPractice.progress')}
+                {t('tilawah.progress')}
               </Text>
               <Text className="text-teal-600 dark:text-teal-500 font-bold">
                 {progress}%
@@ -591,17 +676,17 @@ export default function QuranPracticeScreen() {
               <View className="items-center">
                 <IconSymbol size={64} name="check-circle" color="#FFFFFF" />
                 <Text className="text-white text-2xl font-bold mt-4">
-                  {t('quranPractice.sessionComplete')}
+                  {t('tilawah.sessionComplete')}
                 </Text>
                 <View className="bg-white/20 rounded-xl p-6 w-full mt-4">
                   <Text className="text-white text-center text-lg mb-2">
-                    {t('quranPractice.yourScore')}
+                    {t('tilawah.yourScore')}
                   </Text>
                   <Text className="text-white text-center text-5xl font-bold">
                     {getScorePercentage()}%
                   </Text>
                   <Text className="text-teal-50 text-center mt-2">
-                    {t('quranPractice.correctWords', { correct: score.correct, total: score.total })}
+                    {t('tilawah.correctWords', { correct: score.correct, total: score.total })}
                   </Text>
                 </View>
               </View>
@@ -612,19 +697,19 @@ export default function QuranPracticeScreen() {
         {!sessionComplete && words.length > 0 && (
           <View className="mb-6">
             <Text className="text-lg font-bold text-gray-900 dark:text-white mb-3">
-              {t('quranPractice.status')}
+              {t('tilawah.status')}
             </Text>
             <View className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700">
               <View className="flex-row items-center mb-3">
                 <View className={`w-3 h-3 rounded-full mr-3 ${isRecording ? 'bg-red-500 animate-pulse' : 'bg-gray-400'}`} />
                 <Text className="text-gray-900 dark:text-white font-semibold">
-                  {isRecording ? t('quranPractice.listening') : t('quranPractice.ready')}
+                  {isRecording ? t('tilawah.listening') : t('tilawah.ready')}
                 </Text>
               </View>
               {isRecording && currentWordIndex < words.length && (
                 <View className="mt-3 bg-amber-50 dark:bg-amber-950 rounded-xl p-4">
                   <Text className="text-amber-900 dark:text-amber-100 font-semibold mb-2">
-                    {t('quranPractice.currentWord', { current: currentWordIndex + 1, total: words.length })}
+                    {t('tilawah.currentWord', { current: currentWordIndex + 1, total: words.length })}
                   </Text>
                   <Text className="text-3xl font-bold text-amber-600 dark:text-amber-400 text-right">
                     {words[currentWordIndex].text}
@@ -650,7 +735,7 @@ export default function QuranPracticeScreen() {
                 <View className="flex-row items-center justify-center">
                   <IconSymbol size={24} name="play-arrow" color="#FFFFFF" />
                   <Text className="text-white font-bold text-lg ml-2">
-                    {t('quranPractice.start')}
+                    {t('tilawah.start')}
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -671,24 +756,13 @@ export default function QuranPracticeScreen() {
               <View className="flex-row items-center justify-center">
                 <IconSymbol size={24} name="stop" color="#FFFFFF" />
                 <Text className="text-white font-bold text-lg ml-2">
-                  {t('quranPractice.stop')}
+                  {t('tilawah.stop')}
                 </Text>
               </View>
             </TouchableOpacity>
           )}
         </View>
 
-        {/* <View className="bg-teal-50 dark:bg-teal-950 rounded-2xl p-6">
-          <View className="flex-row items-center mb-3">
-            <IconSymbol size={24} name="info" color="#0d9488" />
-            <Text className="text-lg font-semibold text-gray-900 dark:text-white ml-2">
-              {t('quranPractice.tips')}
-            </Text>
-          </View>
-          <Text className="text-gray-700 dark:text-gray-300 leading-6">
-            {t('quranPractice.tipsDescription')}
-          </Text>
-        </View> */}
         <LinearGradient
           colors={colorScheme === 'dark' ? ['#1f2937', '#374151'] : ['#d1fae5', '#ccfbf1']}
           start={{ x: 0, y: 0 }}
@@ -698,11 +772,11 @@ export default function QuranPracticeScreen() {
           <View className="flex-row items-center mb-3">
             <IconSymbol size={24} name="info" color="#059669" />
             <Text className="text-lg font-semibold text-gray-900 dark:text-white ml-2">
-              {t('quranPractice.tips')}
+              {t('tilawah.tips')}
             </Text>
           </View>
           <Text className="text-gray-700 dark:text-gray-300 leading-6">
-            {t('quranPractice.tipsDescription')}
+            {t('tilawah.tipsDescription')}
           </Text>
         </LinearGradient>
       </ScrollView>
