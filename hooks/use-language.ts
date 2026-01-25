@@ -8,6 +8,9 @@ export const LANGUAGES = [
   { code: 'ms', name: 'Malay', nativeName: 'Bahasa Melayu', flag: '🇲🇾' },
   { code: 'ur', name: 'Urdu', nativeName: 'اردو', flag: '🇵🇰' },
   { code: 'ar', name: 'Arabic', nativeName: 'العربية', flag: '🇸🇦' },
+  { code: 'tr', name: 'Turkish', nativeName: 'Türkçe', flag: '🇹🇷' },
+  { code: 'bn', name: 'Bengali', nativeName: 'বাংলা', flag: '🇧🇩' },
+  { code: 'fa', name: 'Persian', nativeName: 'فارسی', flag: '🇮🇷' },
 ] as const;
 
 export const useLanguage = () => {

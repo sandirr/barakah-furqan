@@ -33,7 +33,6 @@ export default function ShalatScreen() {
   const [scheduledCount, setScheduledCount] = useState(0);
   const [isUsingCache, setIsUsingCache] = useState(false);
   
-  // Requirements check
   const [hasLocationPermission, setHasLocationPermission] = useState(false);
   const [hasInternet, setHasInternet] = useState(false);
   const [checkingRequirements, setCheckingRequirements] = useState(true);
@@ -57,10 +56,7 @@ export default function ShalatScreen() {
   }, [notificationEnabled, prayerTimes]);
 
   const initializeScreen = async () => {
-    // Step 1: Load cache immediately if available
     await loadCacheFirst();
-    
-    // Step 2: Check requirements
     await checkRequirements();
   };
 
@@ -71,29 +67,25 @@ export default function ShalatScreen() {
         setPrayerTimes(cached);
         await updateNextPrayer(cached);
         setIsUsingCache(true);
-        console.log('✓ Cache loaded immediately');
       }
     } catch (err) {
-      console.log('No cache available');
+      console.error('Cache load error:', err);
     }
   };
 
   const checkRequirements = async () => {
     setCheckingRequirements(true);
     
-    // Check internet
     const netInfo = await NetInfo.fetch();
     const internetAvailable = netInfo.isConnected && netInfo.isInternetReachable !== false;
     setHasInternet(internetAvailable as boolean);
 
-    // Check location permission
     const { status } = await Location.getForegroundPermissionsAsync();
     const locationGranted = status === 'granted';
     setHasLocationPermission(locationGranted);
 
     setCheckingRequirements(false);
 
-    // If both OK, load prayer times
     if (locationGranted && internetAvailable) {
       await loadSettings();
       await requestNotificationPermission();
@@ -150,13 +142,11 @@ export default function ShalatScreen() {
       setError(null);
       setLoading(true);
 
-      // Double check internet
       const netInfo = await NetInfo.fetch();
       if (!netInfo.isConnected) {
         throw new Error(t('shalat.noInternet'));
       }
 
-      // Get location
       const locationResult = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
         timeInterval: 5000,
@@ -168,7 +158,6 @@ export default function ShalatScreen() {
       };
       setLocation(userLocation);
 
-      // Get prayer times from API (will use cache if available today)
       const times = await prayerTimesService.getPrayerTimes(
         userLocation.lat,
         userLocation.lng
@@ -178,20 +167,17 @@ export default function ShalatScreen() {
       await updateNextPrayer(times);
       setIsUsingCache(false);
 
-      // Try reverse geocoding (non-blocking)
       tryReverseGeocode(userLocation).catch(() => {});
 
-      // Schedule notifications
       if (notificationEnabled) {
         await notificationService.scheduleAllPrayerNotifications(times);
         await checkScheduledNotifications();
       }
 
     } catch (err: any) {
-      console.error('❌ Load error:', err);
+      console.error('Load error:', err);
       setError(err.message || t('shalat.loadError'));
       
-      // If we already have cache displayed, just show error without alert
       if (!isUsingCache) {
         const cached = await prayerTimesService.getCachedPrayerTimes();
         if (cached) {
@@ -225,7 +211,7 @@ export default function ShalatScreen() {
         }
       }
     } catch (err) {
-      console.log('Geocoding failed (non-critical)');
+      console.error('Geocoding error:', err);
     }
   };
 
@@ -242,7 +228,6 @@ export default function ShalatScreen() {
     setRefreshing(true);
     setError(null);
     
-    // Get location
     try {
       const locationResult = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
@@ -255,18 +240,16 @@ export default function ShalatScreen() {
       };
       setLocation(userLocation);
 
-      // Force refresh from API (skipCache = true)
       const times = await prayerTimesService.getPrayerTimes(
         userLocation.lat,
         userLocation.lng,
-        true // Skip cache to force fresh data
+        true
       );
       
       setPrayerTimes(times);
       await updateNextPrayer(times);
       setIsUsingCache(false);
 
-      // Update notifications
       if (notificationEnabled) {
         await notificationService.scheduleAllPrayerNotifications(times);
         await checkScheduledNotifications();
@@ -343,7 +326,6 @@ export default function ShalatScreen() {
     return icons[name] || 'schedule';
   };
 
-  // Requirements not met screen
   if (checkingRequirements && !prayerTimes) {
     return (
       <SafeAreaView className="flex-1 bg-white dark:bg-gray-900">
@@ -352,6 +334,17 @@ export default function ShalatScreen() {
           <Text className="text-gray-600 dark:text-gray-400 mt-4">
             {t('shalat.checking')}
           </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+  
+  if (loading && !prayerTimes) {
+    return (
+      <SafeAreaView className="flex-1 bg-white dark:bg-gray-900">
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color="#059669" />
+          <Text className="text-gray-600 dark:text-gray-400 mt-4">{t('common.loading')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -377,8 +370,7 @@ export default function ShalatScreen() {
             {t('shalat.requirementsNotMet')}
           </Text>
           
-          <View className="w-full mt-6 space-y-4">
-            {/* Location Permission */}
+          <View className="w-full mt-4 gap-y-4">
             <View className={`p-4 rounded-xl mb-4 ${hasLocationPermission ? 'bg-green-50 dark:bg-green-950' : 'bg-red-50 dark:bg-red-950'}`}>
               <View className="flex-row items-center mb-2">
                 <IconSymbol 
@@ -405,7 +397,6 @@ export default function ShalatScreen() {
               )}
             </View>
 
-            {/* Internet Connection */}
             <View className={`p-4 rounded-xl ${hasInternet ? 'bg-green-50 dark:bg-green-950' : 'bg-red-50 dark:bg-red-950'}`}>
               <View className="flex-row items-center mb-2">
                 <IconSymbol 
@@ -446,21 +437,10 @@ export default function ShalatScreen() {
     );
   }
 
-  if (loading && !prayerTimes) {
-    return (
-      <SafeAreaView className="flex-1 bg-white dark:bg-gray-900">
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#059669" />
-          <Text className="text-gray-600 dark:text-gray-400 mt-4">{t('common.loading')}</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   return (
     <SafeAreaView className="flex-1 bg-green-600 dark:bg-green-700">
       <View className="p-4 bg-green-600 dark:bg-green-700">
-        <View className="flex-row items-center mb-4">
+        <View className="flex-row items-center mb-2">
           <TouchableOpacity onPress={() => router.back()} className="mr-3">
             <IconSymbol size={24} name="arrow-back" color="#FFFFFF" />
           </TouchableOpacity>
@@ -513,7 +493,7 @@ export default function ShalatScreen() {
         )}
 
         {nextPrayer && (
-          <View className="bg-green-600 dark:bg-green-700 rounded-3xl p-6 mb-6 shadow-lg">
+          <View className="bg-green-600 dark:bg-green-700 rounded-3xl p-6 mb-4 shadow-lg">
             <Text className="text-green-50 text-sm mb-2">{t('shalat.nextPrayer')}</Text>
             <View className="flex-row items-center justify-between">
               <View className="flex-1">
@@ -531,7 +511,7 @@ export default function ShalatScreen() {
           </View>
         )}
 
-        <View className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 mb-6">
+        <View className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 mb-4">
           <View className="p-4 border-b border-gray-100 dark:border-gray-700">
             <Text className="text-lg font-bold text-gray-900 dark:text-white">
               {t('shalat.todaySchedule')}
@@ -562,7 +542,7 @@ export default function ShalatScreen() {
         </View>
 
         {location && (
-          <View className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 mb-6">
+          <View className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 mb-4">
             <View className="p-4 border-b border-gray-100 dark:border-gray-700">
               <Text className="text-lg font-bold text-gray-900 dark:text-white">
                 {t('shalat.location')}
@@ -601,7 +581,7 @@ export default function ShalatScreen() {
           </View>
         )}
 
-        <View className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 mb-6">
+        <View className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 mb-4">
           <View className="p-4 border-b border-gray-100 dark:border-gray-700">
             <Text className="text-lg font-bold text-gray-900 dark:text-white">
               {t('shalat.settings')}
@@ -648,7 +628,7 @@ export default function ShalatScreen() {
           </View>
         </View>
 
-        {adhanEnabled && (
+        {adhanEnabled && __DEV__ && (
           <TouchableOpacity
             onPress={testAdhan}
             className="bg-green-100 dark:bg-green-900 rounded-2xl p-4 flex-row items-center justify-center mb-3"
@@ -660,7 +640,7 @@ export default function ShalatScreen() {
           </TouchableOpacity>
         )}
 
-        {notificationEnabled && (
+        {notificationEnabled && __DEV__ && (
           <TouchableOpacity
             onPress={testNotification}
             className="bg-blue-100 dark:bg-blue-900 rounded-2xl p-4 flex-row items-center justify-center"

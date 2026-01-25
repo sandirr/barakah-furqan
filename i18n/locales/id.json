@@ -25,7 +25,20 @@
     "shalat": "Waktu Shalat",
     "shalatDescription": "Lihat jadwal shalat harian",
     "dailyReminder": "Pengingat Harian",
-    "dailyReminderText": "Ingatlah Allah dalam setiap langkah harimu. Jaga shalatmu dan mohon petunjuk-Nya dalam segala urusan."
+    "dailyReminder0": "Sesungguhnya dalam penciptaan langit dan bumi, dan pergantian malam dan siang terdapat tanda-tanda bagi orang yang berakal.",
+    "dailyReminderVerse0": "(QS. Ali 'Imran: 190)",
+    "dailyReminder1": "Dan hanya kepada Tuhanmulah hendaknya kamu berharap.",
+    "dailyReminderVerse1": "(QS. Al-Insyirah: 8)",
+    "dailyReminder2": "Dan berbuat baiklah, sesungguhnya Allah menyukai orang-orang yang berbuat baik.",
+    "dailyReminderVerse2": "(QS. Al-Baqarah: 195)",
+    "dailyReminder3": "Maka ingatlah kepada-Ku, Aku pun akan ingat kepadamu. Bersyukurlah kepada-Ku, dan janganlah kamu ingkar kepada-Ku.",
+    "dailyReminderVerse3": "(QS. Al-Baqarah: 152)",
+    "dailyReminder4": "Sesungguhnya bersama kesulitan ada kemudahan. Maka apabila engkau telah selesai (dari sesuatu urusan), tetaplah bekerja keras (untuk urusan yang lain).",
+    "dailyReminderVerse4": "(QS. Al-Insyirah: 6-7)",
+    "dailyReminder5": "Wahai orang-orang yang beriman! Apabila diseru untuk menunaikan shalat pada hari Jumat, maka bersegeralah kamu mengingat Allah dan tinggalkanlah jual beli.",
+    "dailyReminderVerse5": "(QS. Al-Jumu'ah: 9)",
+    "dailyReminder6": "Dan mintalah ampunan kepada Tuhanmu, kemudian bertobatlah kepada-Nya. Sesungguhnya Tuhanku Maha Penyayang, Maha Pengasih.",
+    "dailyReminderVerse6": "(QS. Hud: 90)"
   },
   "quran": {
     "title": "Al-Quran",
@@ -70,7 +83,16 @@
     "calibrating": "Mengkalibrasi kompas... Gerakkan perangkat membentuk angka 8",
     "howToUse": "Cara Menggunakan",
     "instruction": "Arahkan perangkat Anda mengikuti ikon masjid (hijau) pada kompas. Putar perangkat hingga ikon masjid berada pada posisi yang stabil dan sejajar dengan arah mata angin yang ditampilkan di card atas.",
-    "currentDirection": "Arah Kiblat dari lokasi Anda"
+    "currentDirection": "Arah Kiblat dari lokasi Anda",
+    "requirementsNotMet": "Persyaratan Belum Terpenuhi",
+    "locationPermission": "Izin Lokasi",
+    "locationPermissionDesc": "Diperlukan untuk menghitung arah kiblat sesuai lokasi Anda",
+    "enableLocation": "Aktifkan Lokasi",
+    "openSettings": "Buka Pengaturan",
+    "checkAgain": "Periksa Lagi",
+    "checking": "Memeriksa persyaratan...",
+    "locationPermissionRequired": "Izin Lokasi Diperlukan",
+    "locationPermissionRequiredDesc": "Aplikasi memerlukan akses lokasi untuk menghitung arah kiblat. Silakan aktifkan di pengaturan."
   },
   "shalat": {
     "title": "Waktu Shalat",

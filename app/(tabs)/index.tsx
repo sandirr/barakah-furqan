@@ -41,6 +41,16 @@ export default function HomeScreen() {
     router.push(route as any);
   };
 
+  const getDailyReminder = () => {
+    const dayOfWeek = new Date().getDay();
+    return {
+      text: t(`home.dailyReminder${dayOfWeek}`),
+      verse: t(`home.dailyReminderVerse${dayOfWeek}`)
+    };
+  };
+
+  const reminder = getDailyReminder();
+
   return (
     <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={["top"]}>
       <ScrollView
@@ -48,16 +58,13 @@ export default function HomeScreen() {
         contentContainerStyle={{ padding: 16 }}
       >
         <View className="items-center mb-8">
-          {/* <View className="w-20 h-20 bg-emerald-600 dark:bg-emerald-700 rounded-full items-center justify-center mb-4 shadow-lg">
-            <IconSymbol size={40} name="book" color="#FFFFFF" />
-          </View> */}
           <Image source={require("@/assets/images/icon-barakah.png")} className='h-20 w-20 rounded-full mb-4' />
           <Text className="text-3xl font-bold text-gray-900 dark:text-white">
             Barakah Furqan
           </Text>
         </View>
 
-        <View className="bg-emerald-600 dark:bg-emerald-700 rounded-3xl p-6 mb-8 shadow-lg">
+        <View className="bg-emerald-600 dark:bg-emerald-700 rounded-3xl p-4 mb-8 shadow-lg">
           <Text className="text-white text-2xl font-bold mb-2">
             {t('home.greeting')}
           </Text>
@@ -104,8 +111,11 @@ export default function HomeScreen() {
               {t('home.dailyReminder')}
             </Text>
           </View>
-          <Text className="text-gray-700 dark:text-gray-300 leading-6">
-            {t('home.dailyReminderText')}
+          <Text className="text-gray-700 dark:text-gray-300 leading-6 mb-3">
+            {reminder.text}
+          </Text>
+          <Text className="text-emerald-700 dark:text-emerald-400 text-sm italic">
+            {reminder.verse}
           </Text>
         </LinearGradient>
       </ScrollView>

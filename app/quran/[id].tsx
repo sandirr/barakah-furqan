@@ -215,7 +215,7 @@ export default function SurahDetailScreen() {
     const sizes = getFontSize();
 
     return (
-      <View className="mb-6">
+      <View className="mb-4">
         <LinearGradient
           colors={colorScheme === 'dark' ? ['#047857', '#0f766e'] : ['#059669', '#0d9488']}
           start={{ x: 0, y: 0 }}
@@ -244,7 +244,7 @@ export default function SurahDetailScreen() {
         </LinearGradient>
 
         {showBasmalah && (
-          <View className="mt-6 rounded-2xl px-4">
+          <View className="mt-4 rounded-2xl px-4">
             <Text className="text-center text-gray-900 dark:text-white font-bold" style={{ fontSize: sizes.arabic }}>
               بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ
             </Text>
@@ -264,7 +264,7 @@ export default function SurahDetailScreen() {
     const verseText = removeBasmalah ? quranService.filterBasmalah(item.text) : item.text;
 
     return (
-      <View className={`mb-6 ${isPlaying ? 'bg-emerald-50 dark:bg-emerald-950' : ''} !rounded-xl !overflow-hidden p-2`}>
+      <View className={`mb-4 ${isPlaying ? 'bg-emerald-50 dark:bg-emerald-950' : ''} !rounded-xl !overflow-hidden p-2`}>
         <View className="flex-row items-center mb-3">
           <View className="w-8 h-8 bg-emerald-600 dark:bg-emerald-700 rounded-full items-center justify-center">
             <Text className="text-white font-bold text-xs">{item.numberInSurah}</Text>

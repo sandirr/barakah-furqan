@@ -118,7 +118,7 @@ export default function QuranListScreen() {
     <SafeAreaView className="flex-1 bg-emerald-600 dark:bg-emerald-700">
       <View className='bg-white dark:bg-gray-900 flex-1'>
         <View className="p-4 bg-emerald-600 dark:bg-emerald-700">
-          <View className="flex-row items-center mb-4">
+          <View className="flex-row items-center mb-2">
             <TouchableOpacity onPress={() => router.back()} className="mr-3">
               <IconSymbol size={24} name="arrow-back" color="#FFFFFF" />
             </TouchableOpacity>
