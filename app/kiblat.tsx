@@ -327,7 +327,7 @@ export default function KiblatScreen() {
     await loadLocationAndCompass();
   };
 
-  if (checkingRequirements && !location) {
+  if (checkingRequirements) {
     return (
       <SafeAreaView className="flex-1 bg-white dark:bg-gray-900">
         <View className="flex-1 items-center justify-center">
@@ -335,6 +335,17 @@ export default function KiblatScreen() {
           <Text className="text-gray-600 dark:text-gray-400 mt-4">
             {t('kiblat.checking')}
           </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (loading && !location) {
+    return (
+      <SafeAreaView className="flex-1 bg-white dark:bg-gray-900">
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color="#14B8A6" />
+          <Text className="text-gray-600 dark:text-gray-400 mt-4">{t('common.loading')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -390,17 +401,6 @@ export default function KiblatScreen() {
               {t('kiblat.checkAgain')}
             </Text>
           </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (loading && !location) {
-    return (
-      <SafeAreaView className="flex-1 bg-white dark:bg-gray-900">
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#14B8A6" />
-          <Text className="text-gray-600 dark:text-gray-400 mt-4">{t('common.loading')}</Text>
         </View>
       </SafeAreaView>
     );

@@ -57,14 +57,19 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ padding: 16 }}
       >
-        <View className="items-center mb-8">
-          <Image source={require("@/assets/images/icon-barakah.png")} className='h-20 w-20 rounded-full mb-4' />
-          <Text className="text-3xl font-bold text-gray-900 dark:text-white">
-            Barakah Furqan
-          </Text>
+        <View className="mb-6 flex-row items-center justify-between">
+          <Image source={require("@/assets/images/icon-barakah.png")} className='h-20 w-20 rounded-full' />
+          <View>
+            <Text className="text-2xl font-bold text-gray-900 dark:text-white">
+              Barakah Furqan
+            </Text>
+            <Text className="text-2xl font-bold text-gray-900 dark:text-white text-right">
+              هُدًى لِّلْمُتَّقِينَ
+            </Text>
+          </View>
         </View>
 
-        <View className="bg-emerald-600 dark:bg-emerald-700 rounded-3xl p-4 mb-8 shadow-lg">
+        <View className="bg-emerald-600 dark:bg-emerald-700 rounded-3xl p-4 mb-6 shadow-lg">
           <Text className="text-white text-2xl font-bold mb-2">
             {t('home.greeting')}
           </Text>
@@ -103,7 +108,7 @@ export default function HomeScreen() {
           colors={colorScheme === 'dark' ? ['#1f2937', '#374151'] : ['#d1fae5', '#ccfbf1']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
-          style={{ borderRadius: 16, padding: 24, marginTop: 32 }}
+          style={{ borderRadius: 16, padding: 24, marginTop: 24 }}
         >
           <View className="flex-row items-center mb-3">
             <IconSymbol size={24} name="info" color="#059669" />

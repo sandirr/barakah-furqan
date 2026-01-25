@@ -326,7 +326,7 @@ export default function ShalatScreen() {
     return icons[name] || 'schedule';
   };
 
-  if (checkingRequirements && !prayerTimes) {
+  if (checkingRequirements) {
     return (
       <SafeAreaView className="flex-1 bg-white dark:bg-gray-900">
         <View className="flex-1 items-center justify-center">
