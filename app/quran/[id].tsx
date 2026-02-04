@@ -1,12 +1,12 @@
-import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Ayah, quranService, SurahDetail, Tafsir, Translation } from '@/services/quran.service';
 import { Audio } from 'expo-av';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { ALargeSmall, ArrowUp, BookText, ChevronLeft, Languages, ListOrdered, Pause, Play, Square, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, FlatList, Modal, NativeScrollEvent, NativeSyntheticEvent, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, FlatList, Modal, NativeScrollEvent, NativeSyntheticEvent, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function SurahDetailScreen() {
@@ -274,14 +274,14 @@ export default function SurahDetailScreen() {
             onPress={() => playAudio(item.numberInSurah)}
             className="ml-3 w-10 h-10 bg-emerald-100 dark:bg-emerald-900 rounded-full items-center justify-center"
           >
-            <IconSymbol size={20} name={isPlaying ? 'pause' : 'play-arrow'} color="#059669" />
+            {isPlaying ? <Pause size={20} color="#059669" /> : <Play size={20} color="#059669" />}
           </TouchableOpacity>
           {hasTafsir && (
             <TouchableOpacity
               onPress={() => showTafsir(item.numberInSurah)}
               className="ml-2 w-10 h-10 bg-teal-100 dark:bg-teal-900 rounded-full items-center justify-center"
             >
-              <IconSymbol size={20} name="menu-book" color="#0d9488" />
+              <BookText size={20} color="#0d9488" />
             </TouchableOpacity>
           )}
         </View>
@@ -325,11 +325,11 @@ export default function SurahDetailScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-emerald-600 dark:bg-emerald-700">
+    <SafeAreaView className="flex-1 bg-emerald-600 dark:bg-emerald-700" edges={["top"]}>
       <View className="p-4 bg-emerald-600 dark:bg-emerald-700">
         <View className="flex-row items-center">
           <TouchableOpacity onPress={() => router.back()} className="mr-3">
-            <IconSymbol size={24} name="arrow-back" color="#FFFFFF" />
+            <ChevronLeft size={24} color="#FFFFFF" />
           </TouchableOpacity>
           <View className="flex-1">
             <Text className="text-xl font-bold text-white">
@@ -370,7 +370,7 @@ export default function SurahDetailScreen() {
         />
       </View>
 
-      <View className="absolute left-0 right-0 px-4 pb-4" style={{ bottom: insets.bottom }}>
+      <View className="absolute left-0 right-0 px-4 pb-4" style={{ bottom: Platform.select({ android: insets.bottom, ios: 0 }) }}>
         <View className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
           <View className="h-1 bg-gray-200 dark:bg-gray-700">
             <View 
@@ -385,7 +385,7 @@ export default function SurahDetailScreen() {
               className="items-center"
             >
               <View className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-full items-center justify-center">
-                <IconSymbol size={24} name="format-list-numbered" color="#6B7280" />
+                <ListOrdered size={24} color="#6B7280" />
               </View>
               <Text className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                 {t('quran.goToAyah')}
@@ -398,10 +398,9 @@ export default function SurahDetailScreen() {
                 className="items-center"
               >
                 <View className={`w-12 h-12 rounded-full items-center justify-center ${showTranslation ? 'bg-emerald-100 dark:bg-emerald-900' : 'bg-gray-100 dark:bg-gray-700'}`}>
-                  <IconSymbol 
-                    size={24} 
-                    name="translate" 
-                    color={showTranslation ? '#059669' : '#6B7280'} 
+                  <Languages 
+                    size={24}
+                    color={showTranslation ? '#059669' : '#6B7280'}
                   />
                 </View>
                 <Text className="text-xs text-gray-600 dark:text-gray-400 mt-1">
@@ -415,7 +414,7 @@ export default function SurahDetailScreen() {
               className="items-center"
             >
               <View className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-full items-center justify-center">
-                <IconSymbol size={24} name="text-format" color="#6B7280" />
+                <ALargeSmall size={24} color="#6B7280" />
               </View>
               <Text className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                 {fontSize === 'small' ? t('quran.small') : fontSize === 'medium' ? t('quran.medium') : t('quran.large')}
@@ -428,7 +427,7 @@ export default function SurahDetailScreen() {
                 className="items-center"
               >
                 <View className="w-12 h-12 bg-red-100 dark:bg-red-900 rounded-full items-center justify-center">
-                  <IconSymbol size={24} name="stop" color="#DC2626" />
+                  <Square size={24} color="#DC2626" />
                 </View>
                 <Text className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                   {t('quran.stop')}
@@ -441,7 +440,7 @@ export default function SurahDetailScreen() {
               className="items-center"
             >
               <View className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-full items-center justify-center">
-                <IconSymbol size={24} name="arrow-upward" color="#6B7280" />
+                <ArrowUp size={24} color="#6B7280" />
               </View>
               <Text className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                 {t('quran.toTop')}
@@ -467,13 +466,13 @@ export default function SurahDetailScreen() {
       >
         <View className="flex-1 bg-black/50 justify-end">
           <View className="bg-white dark:bg-gray-900 rounded-t-3xl" style={{ maxHeight: '70%', marginBottom: insets.bottom }}>
-            <View className="p-6 border-b border-gray-200 dark:border-gray-700">
+            <View className="p-4 border-b border-gray-200 dark:border-gray-700">
               <View className="flex-row items-center justify-between">
                 <Text className="text-xl font-bold text-gray-900 dark:text-white">
                   {t('quran.selectAyah')}
                 </Text>
                 <TouchableOpacity onPress={() => setShowAyahPicker(false)}>
-                  <IconSymbol size={24} name="close" color={colorScheme === 'dark' ? '#FFFFFF' : '#000000'} />
+                  <X size={24} color={colorScheme === 'dark' ? '#FFFFFF' : '#000000'} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -505,17 +504,17 @@ export default function SurahDetailScreen() {
       >
         <View className="flex-1 bg-black/50 justify-end">
           <View className="bg-white dark:bg-gray-900 rounded-t-3xl" style={{ maxHeight: '75%', marginBottom: insets.bottom }}>
-            <View className="p-6 border-b border-gray-200 dark:border-gray-700">
+            <View className="p-4 border-b border-gray-200 dark:border-gray-700">
               <View className="flex-row items-center justify-between">
                 <Text className="text-xl font-bold text-gray-900 dark:text-white">
                   {t('quran.tafsir')} - {t('quran.verse')} {selectedTafsir?.ayah}
                 </Text>
                 <TouchableOpacity onPress={() => setSelectedTafsir(null)}>
-                  <IconSymbol size={24} name="close" color={colorScheme === 'dark' ? '#FFFFFF' : '#000000'} />
+                  <X size={24} color={colorScheme === 'dark' ? '#FFFFFF' : '#000000'} />
                 </TouchableOpacity>
               </View>
             </View>
-            <ScrollView className="p-6">
+            <ScrollView className="p-4">
               <Text className="text-base text-gray-700 dark:text-gray-300 leading-7">
                 {selectedTafsir?.text}
               </Text>

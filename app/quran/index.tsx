@@ -1,9 +1,9 @@
-import { IconSymbol } from '@/components/ui/icon-symbol';
 import { quranService, Surah } from '@/services/quran.service';
 import { router } from 'expo-router';
+import { ChevronLeft, Search, SearchX, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, FlatList, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function QuranListScreen() {
@@ -64,7 +64,7 @@ export default function QuranListScreen() {
     <TouchableOpacity
       onPress={() => handleSurahPress(item.number)}
       activeOpacity={0.7}
-      className="bg-white dark:bg-gray-800 rounded-2xl p-4 mb-3 shadow-sm border border-gray-100 dark:border-gray-700"
+      className="bg-white dark:bg-gray-800 rounded-2xl p-4 mb-2 border border-gray-200 dark:border-gray-700"
     >
       <View className="flex-row items-center">
         <View className="w-12 h-12 bg-emerald-600 dark:bg-emerald-700 rounded-xl items-center justify-center mr-4">
@@ -95,7 +95,7 @@ export default function QuranListScreen() {
 
   const renderEmptyList = () => (
     <View className="items-center justify-center py-12">
-      <IconSymbol size={48} name="search-off" color="#9CA3AF" />
+      <SearchX size={48} color="#9CA3AF" />
       <Text className="text-gray-500 dark:text-gray-400 text-center mt-4">
         {t('quran.noResults')}
       </Text>
@@ -115,12 +115,12 @@ export default function QuranListScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-emerald-600 dark:bg-emerald-700">
+    <SafeAreaView className="flex-1 bg-emerald-600 dark:bg-emerald-700" edges={["top"]}>
       <View className='bg-white dark:bg-gray-900 flex-1'>
         <View className="p-4 bg-emerald-600 dark:bg-emerald-700">
           <View className="flex-row items-center mb-2">
             <TouchableOpacity onPress={() => router.back()} className="mr-3">
-              <IconSymbol size={24} name="arrow-back" color="#FFFFFF" />
+              <ChevronLeft size={24} color="#FFFFFF" />
             </TouchableOpacity>
             <Text className="text-2xl font-bold text-white flex-1">
               {t('quran.title')}
@@ -131,17 +131,23 @@ export default function QuranListScreen() {
           </Text>
 
           <View className="bg-white dark:bg-gray-800 rounded-2xl flex-row items-center px-4 py-1">
-            <IconSymbol size={20} name="search" color="#6B7280" />
+            <Search size={20} color="#6B7280" />
             <TextInput
               value={searchQuery}
               onChangeText={setSearchQuery}
               placeholder={t('quran.searchPlaceholder')}
               placeholderTextColor="#9CA3AF"
               className="flex-1 ml-3 text-gray-900 dark:text-white text-base"
+              style={{
+                paddingVertical: Platform.select({
+                  android: 4,
+                  ios: 8
+                })
+              }}
             />
             {searchQuery.length > 0 && (
               <TouchableOpacity onPress={clearSearch}>
-                <IconSymbol size={20} name="close" color="#6B7280" />
+                <X size={20} color="#6B7280" />
               </TouchableOpacity>
             )}
           </View>

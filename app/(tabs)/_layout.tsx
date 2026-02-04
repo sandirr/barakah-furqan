@@ -2,8 +2,8 @@ import { Tabs } from 'expo-router';
 import React from 'react';
 
 import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
+import { BookIcon, HomeIcon, Settings2 } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useColorScheme } from 'react-native';
 
@@ -27,7 +27,7 @@ export default function TabLayout() {
         name="index"
         options={{
           title: t('navigation.home'),
-          tabBarIcon: ({ color }) => <IconSymbol size={24} name="apps" color={color} />,
+          tabBarIcon: ({ color }) => <HomeIcon size={24} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -35,7 +35,7 @@ export default function TabLayout() {
         options={{
           href: null,
           title: t('navigation.quranPractice'),
-          tabBarIcon: ({ color }) => <IconSymbol size={24} name="mic" color={color} />,
+          tabBarIcon: ({ color }) => <BookIcon size={24} color={color} />,
         }}
       />
       {/* <Tabs.Screen
@@ -49,7 +49,7 @@ export default function TabLayout() {
         name="settings"
         options={{
           title: t('navigation.settings'),
-          tabBarIcon: ({ color }) => <IconSymbol size={24} name="settings" color={color} />,
+          tabBarIcon: ({ color }) => <Settings2 size={24} color={color} />,
         }}
       />
     </Tabs>
