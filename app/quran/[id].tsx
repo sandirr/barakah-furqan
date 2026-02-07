@@ -1,9 +1,10 @@
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Ayah, quranService, SurahDetail, Tafsir, Translation } from '@/services/quran.service';
+import { Amiri_400Regular, Amiri_700Bold, useFonts } from '@expo-google-fonts/amiri';
 import { Audio } from 'expo-av';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { ALargeSmall, ArrowUp, BookText, ChevronLeft, Languages, ListOrdered, Pause, Play, Square, X } from 'lucide-react-native';
+import { ALargeSmall, ArrowUp, BookOpen, BookText, ChevronLeft, Languages, ListOrdered, Pause, Play, Square, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, FlatList, Modal, NativeScrollEvent, NativeSyntheticEvent, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
@@ -30,6 +31,12 @@ export default function SurahDetailScreen() {
   const [isAutoPlaying, setIsAutoPlaying] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [showAyahPicker, setShowAyahPicker] = useState(false);
+  const [isMushafView, setIsMushafView] = useState(false);
+
+  const [fontsLoaded] = useFonts({
+    Amiri_400Regular,
+    Amiri_700Bold,
+  });
 
   useFocusEffect(
     useCallback(() => {
@@ -206,6 +213,17 @@ export default function SurahDetailScreen() {
     }
   };
 
+  const getArabicFontFamily = (bold: boolean = false) => {
+    if (!fontsLoaded) return undefined;
+    return bold ? 'Amiri_700Bold' : 'Amiri_400Regular';
+  };
+
+  const toArabicIndicNumber = (value: number) => {
+    const digits = value.toString().split('');
+    const map = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
+    return digits.map((d) => map[Number(d)] ?? d).join('');
+  };
+
   const insets = useSafeAreaInsets();
 
   const renderHeader = () => {
@@ -222,7 +240,9 @@ export default function SurahDetailScreen() {
           end={{ x: 1, y: 1 }}
           style={{ borderRadius: 24, padding: 24, alignItems: 'center' }}
         >
-          <Text className="text-4xl text-white mb-3">{surah.name}</Text>
+          <Text className="text-4xl text-white mb-3" style={{ fontFamily: getArabicFontFamily(true) }}>
+            {surah.name}
+          </Text>
           <Text className="text-xl font-bold text-white mb-2">
             {surah.englishName}
           </Text>
@@ -245,7 +265,10 @@ export default function SurahDetailScreen() {
 
         {showBasmalah && (
           <View className="mt-4 rounded-2xl px-4">
-            <Text className="text-center text-gray-900 dark:text-white font-bold" style={{ fontSize: sizes.arabic }}>
+            <Text
+              className="text-center text-gray-900 dark:text-white font-bold"
+              style={{ fontSize: sizes.arabic, fontFamily: getArabicFontFamily(true) }}
+            >
               بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ
             </Text>
           </View>
@@ -262,38 +285,43 @@ export default function SurahDetailScreen() {
 
     const removeBasmalah = item.numberInSurah === 1 && surah && surah.number !== 1 && surah.number !== 9;
     const verseText = removeBasmalah ? quranService.filterBasmalah(item.text) : item.text;
+    const mushafText = `${verseText} ۝${toArabicIndicNumber(item.numberInSurah)}`;
+    const showTranslationBlock = hasTranslation && showTranslation && translation && !isMushafView;
+    const arabicFontSize = isMushafView ? sizes.arabic + 4 : sizes.arabic;
 
     return (
       <View className={`mb-4 ${isPlaying ? 'bg-emerald-50 dark:bg-emerald-950' : ''} !rounded-xl !overflow-hidden p-2`}>
-        <View className="flex-row items-center mb-3">
-          <View className="w-8 h-8 bg-emerald-600 dark:bg-emerald-700 rounded-full items-center justify-center">
-            <Text className="text-white font-bold text-xs">{item.numberInSurah}</Text>
-          </View>
-          <View className="flex-1 h-px bg-gray-200 dark:bg-gray-700 ml-3" />
-          <TouchableOpacity
-            onPress={() => playAudio(item.numberInSurah)}
-            className="ml-3 w-10 h-10 bg-emerald-100 dark:bg-emerald-900 rounded-full items-center justify-center"
-          >
-            {isPlaying ? <Pause size={20} color="#059669" /> : <Play size={20} color="#059669" />}
-          </TouchableOpacity>
-          {hasTafsir && (
+        {!isMushafView && (
+          <View className="flex-row items-center mb-3">
+            <View className="w-8 h-8 bg-emerald-600 dark:bg-emerald-700 rounded-full items-center justify-center">
+              <Text className="text-white font-bold text-xs">{item.numberInSurah}</Text>
+            </View>
+            <View className="flex-1 h-px bg-gray-200 dark:bg-gray-700 ml-3" />
             <TouchableOpacity
-              onPress={() => showTafsir(item.numberInSurah)}
-              className="ml-2 w-10 h-10 bg-teal-100 dark:bg-teal-900 rounded-full items-center justify-center"
+              onPress={() => playAudio(item.numberInSurah)}
+              className="ml-3 w-10 h-10 bg-emerald-100 dark:bg-emerald-900 rounded-full items-center justify-center"
             >
-              <BookText size={20} color="#0d9488" />
+              {isPlaying ? <Pause size={20} color="#059669" /> : <Play size={20} color="#059669" />}
             </TouchableOpacity>
-          )}
-        </View>
+            {hasTafsir && (
+              <TouchableOpacity
+                onPress={() => showTafsir(item.numberInSurah)}
+                className="ml-2 w-10 h-10 bg-teal-100 dark:bg-teal-900 rounded-full items-center justify-center"
+              >
+                <BookText size={20} color="#0d9488" />
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
 
-        <Text 
+        <Text
           className="text-right text-gray-900 dark:text-white mb-4 leading-loose font-bold"
-          style={{ fontSize: sizes.arabic }}
+          style={{ fontSize: arabicFontSize, fontFamily: getArabicFontFamily(true) }}
         >
-          {verseText}
+          {isMushafView ? mushafText : verseText}
         </Text>
 
-        {hasTranslation && showTranslation && translation && (
+        {showTranslationBlock && (
           <View className="bg-emerald-50 dark:bg-gray-800 rounded-2xl p-4">
             <Text 
               className="text-gray-900 dark:text-white leading-6"
@@ -307,7 +335,7 @@ export default function SurahDetailScreen() {
     );
   };
 
-  if (loading) {
+  if (loading || !fontsLoaded) {
     return (
       <View className="flex-1 bg-white dark:bg-gray-900 items-center justify-center">
         <ActivityIndicator size="large" color="#059669" />
@@ -392,7 +420,7 @@ export default function SurahDetailScreen() {
               </Text>
             </TouchableOpacity>
 
-            {hasTranslation && (
+            {(hasTranslation && !isMushafView) && (
               <TouchableOpacity
                 onPress={() => setShowTranslation(!showTranslation)}
                 className="items-center"
@@ -408,6 +436,18 @@ export default function SurahDetailScreen() {
                 </Text>
               </TouchableOpacity>
             )}
+
+            <TouchableOpacity
+              onPress={() => setIsMushafView((prev) => !prev)}
+              className="items-center"
+            >
+              <View className={`w-12 h-12 rounded-full items-center justify-center ${isMushafView ? 'bg-emerald-100 dark:bg-emerald-900' : 'bg-gray-100 dark:bg-gray-700'}`}>
+                <BookOpen size={24} color={isMushafView ? '#059669' : '#6B7280'} />
+              </View>
+              <Text className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                {isMushafView ? t('quran.standardView') : t('quran.mushafView')}
+              </Text>
+            </TouchableOpacity>
 
             <TouchableOpacity
               onPress={cycleFontSize}
@@ -435,17 +475,19 @@ export default function SurahDetailScreen() {
               </TouchableOpacity>
             )}
 
-            <TouchableOpacity
-              onPress={scrollToTop}
-              className="items-center"
-            >
-              <View className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-full items-center justify-center">
-                <ArrowUp size={24} color="#6B7280" />
-              </View>
-              <Text className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                {t('quran.toTop')}
-              </Text>
-            </TouchableOpacity>
+            {!isAutoPlaying &&
+              <TouchableOpacity
+                onPress={scrollToTop}
+                className="items-center"
+              >
+                <View className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-full items-center justify-center">
+                  <ArrowUp size={24} color="#6B7280" />
+                </View>
+                <Text className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                  {t('quran.toTop')}
+                </Text>
+              </TouchableOpacity>
+            }
           </View>
 
           {isAutoPlaying && playingAyah && (

@@ -58,7 +58,9 @@
     "selectAyah": "আয়াত নির্বাচন করুন",
     "small": "ছোট",
     "medium": "মাঝারি",
-    "large": "বড়"
+    "large": "বড়",
+    "mushafView": "মুসহাফ",
+    "standardView": "সাধারণ"
   },
   "settings": {
     "title": "সেটিংস",

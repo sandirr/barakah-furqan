@@ -58,7 +58,9 @@
     "selectAyah": "Pilih Ayat",
     "small": "Kecil",
     "medium": "Sederhana",
-    "large": "Besar"
+    "large": "Besar",
+    "mushafView": "Mushaf",
+    "standardView": "Biasa"
   },
   "settings": {
     "title": "Tetapan",

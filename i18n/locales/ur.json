@@ -58,7 +58,9 @@
     "selectAyah": "آیت منتخب کریں",
     "small": "چھوٹا",
     "medium": "درمیانہ",
-    "large": "بڑا"
+    "large": "بڑا",
+    "mushafView": "مصحف",
+    "standardView": "معیاری"
   },
   "settings": {
     "title": "ترتیبات",

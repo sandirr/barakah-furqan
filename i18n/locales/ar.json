@@ -58,7 +58,9 @@
     "selectAyah": "اختر آية",
     "small": "صغير",
     "medium": "متوسط",
-    "large": "كبير"
+    "large": "كبير",
+    "mushafView": "مصحف",
+    "standardView": "عادي"
   },
   "settings": {
     "title": "الإعدادات",

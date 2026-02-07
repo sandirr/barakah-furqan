@@ -13,6 +13,7 @@
     "clean:android": "cd android && ./gradlew clean && cd .."
   },
   "dependencies": {
+    "@expo-google-fonts/amiri": "^0.4.1",
     "@expo/vector-icons": "^15.0.3",
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-native-community/geolocation": "^3.4.0",

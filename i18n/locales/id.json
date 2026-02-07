@@ -58,7 +58,9 @@
     "selectAyah": "Pilih Ayat",
     "small": "Kecil",
     "medium": "Sedang",
-    "large": "Besar"
+    "large": "Besar",
+    "mushafView": "Mushaf",
+    "standardView": "Standar"
   },
   "settings": {
     "title": "Pengaturan",

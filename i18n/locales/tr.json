@@ -58,7 +58,9 @@
     "selectAyah": "Ayet Seç",
     "small": "Küçük",
     "medium": "Orta",
-    "large": "Büyük"
+    "large": "Büyük",
+    "mushafView": "Mushaf",
+    "standardView": "Standart"
   },
   "settings": {
     "title": "Ayarlar",

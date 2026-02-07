@@ -58,7 +58,9 @@
     "selectAyah": "انتخاب آیه",
     "small": "کوچک",
     "medium": "متوسط",
-    "large": "بزرگ"
+    "large": "بزرگ",
+    "mushafView": "مصحف",
+    "standardView": "استاندارد"
   },
   "settings": {
     "title": "تنظیمات",

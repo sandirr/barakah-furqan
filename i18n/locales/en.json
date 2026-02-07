@@ -58,7 +58,9 @@
     "selectAyah": "Select Verse",
     "small": "Small",
     "medium": "Medium",
-    "large": "Large"
+    "large": "Large",
+    "mushafView": "Mushaf",
+    "standardView": "Standard"
   },
   "settings": {
     "title": "Settings",
