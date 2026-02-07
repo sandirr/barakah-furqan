@@ -68,10 +68,46 @@
     "appearance": "Penampilan",
     "language": "Bahasa",
     "about": "Perihal",
+    "general": "Umum",
+    "preference": "Keutamaan",
+    "support": "Sokongan",
+    "information": "Maklumat",
     "darkMode": "Mod Gelap",
     "darkModeOn": "Tema gelap diaktifkan",
     "darkModeOff": "Tema terang diaktifkan",
-    "version": "Versi"
+    "version": "Versi",
+    "aboutSubtitle": "Data & perkhidmatan",
+    "feedback": "Hantar Maklum Balas",
+    "feedbackSubtitle": "E-melkan cadangan anda",
+    "donation": "Derma",
+    "donationSubtitle": "Sokong Barakah Furqan",
+    "privacyPolicy": "Polisi Privasi",
+    "privacyPolicySubtitle": "Baca polisi kami"
+  },
+  "privacyPolicy": {
+    "title": "Polisi Privasi",
+    "updatedAtLabel": "Tarikh berkuat kuasa:",
+    "updatedAtDate": "2026-02-07",
+    "content": "Barakah Furqan menghormati privasi anda. Polisi ini menerangkan data dan kebenaran yang digunakan untuk menyediakan ciri aplikasi.\n\nData/kebenaran yang digunakan:\n• Lokasi untuk arah kiblat dan waktu solat.\n• Mikrofon untuk latihan tilawah.\n• Sambungan internet untuk mendapatkan jadual solat dan data Al-Quran.\n• Pengecaman suara dalam talian untuk analisis bacaan.\n\nCara penggunaan data:\n• Menjalankan ciri utama pada peranti anda.\n• Meningkatkan kebolehpercayaan aplikasi dan sokongan.\n\nPerkongsian data:\n• Kami tidak menjual data anda.\n• Sebahagian ciri menggunakan perkhidmatan pihak ketiga (cth. jadual solat dan pengecaman suara) yang memproses data mengikut polisi mereka.\n\nKeselamatan:\n• Kami mengambil langkah yang wajar untuk melindungi data anda.\n\nPrivasi kanak-kanak:\n• Aplikasi ini untuk audiens umum dan tidak mengumpul data peribadi kanak-kanak dengan sengaja.\n\nHubungi:\n• Emel: dgirsandi@gmail.com"
+  },
+  "about": {
+    "title": "Tentang",
+    "description": "Barakah Furqan direka untuk membantu anda membaca, memahami, dan berlatih Al-Quran dengan sokongan rohani harian.",
+    "dataTitle": "Data & Perkhidmatan",
+    "dataIntro": "Aplikasi ini menggunakan data/perkhidmatan berikut untuk mengaktifkan ciri utama:",
+    "dataLocation": "Akses lokasi untuk arah kiblat dan waktu solat.",
+    "dataMicrophone": "Akses mikrofon untuk latihan tilawah.",
+    "dataInternet": "Sambungan internet untuk mendapatkan jadual solat dan data Al-Quran.",
+    "dataSpeech": "Pengecaman suara dalam talian untuk analisis bacaan.",
+    "notesTitle": "Penafian",
+    "notes": "Kebenaran hanya digunakan untuk menyediakan ciri aplikasi pada peranti anda."
+  },
+  "donation": {
+    "title": "Derma",
+    "description": "Anda boleh menderma melalui pautan di bawah atau dengan mengimbas QR.",
+    "openLink": "Buka Pautan Derma",
+    "qrHint": "Imbas QR ini untuk menderma",
+    "disclaimer": "Derma akan digunakan untuk pembangunan Barakah Furqan dan 10% akan disalurkan ke rumah anak yatim."
   },
   "kiblat": {
     "title": "Arah Kiblat",

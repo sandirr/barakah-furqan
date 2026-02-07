@@ -1,18 +1,21 @@
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useLanguage } from '@/hooks/use-language';
-import { CircleCheck, Moon, Sun } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+import { ChevronRight, FileText, Globe, Heart, Info, Mail, Moon, Sun } from 'lucide-react-native';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { Linking, ScrollView, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function SettingsScreen() {
   const { t } = useTranslation();
-  const { changeLanguage, currentLanguage, availableLanguages } = useLanguage();
+  const { currentLanguageInfo } = useLanguage();
   const { colorScheme, toggleColorScheme } = useColorScheme();
+  const router = useRouter();
 
   const isDark = colorScheme === 'dark';
+  const languageLabel = currentLanguageInfo?.nativeName ?? t('settings.language');
 
   return (
     <SafeAreaView className='flex-1 bg-white dark:bg-gray-900' edges={["top"]}>
@@ -29,11 +32,11 @@ export default function SettingsScreen() {
         <View className="px-4 pb-6">
           <View className="mb-6">
             <Text className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase mb-3">
-              {t('settings.appearance')}
+              {t('settings.preference')}
             </Text>
             
             <View className="bg-gray-50 dark:bg-gray-800 rounded-2xl overflow-hidden">
-              <View className="flex-row items-center justify-between px-4 py-4">
+              <View className="flex-row items-center justify-between px-4 py-4 border-b border-gray-200 dark:border-gray-700">
                 <View className="flex-row items-center flex-1">
                   <View className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full items-center justify-center mr-3">
                     {isDark ? (
@@ -58,66 +61,127 @@ export default function SettingsScreen() {
                   thumbColor="#FFFFFF"
                 />
               </View>
+
+              <TouchableOpacity
+                onPress={() => router.push('/language-modal')}
+                className="flex-row items-center justify-between px-4 py-4"
+                activeOpacity={0.7}
+              >
+                <View className="flex-row items-center flex-1">
+                  <View className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full items-center justify-center mr-3">
+                    <Globe size={20} color={Colors[colorScheme ?? 'light'].icon} />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-base font-medium text-gray-900 dark:text-white">
+                      {t('settings.language')}
+                    </Text>
+                    <Text className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
+                      {languageLabel}
+                    </Text>
+                  </View>
+                </View>
+                <ChevronRight size={20} color={Colors[colorScheme ?? 'light'].icon} />
+              </TouchableOpacity>
             </View>
           </View>
 
           <View className="mb-6">
             <Text className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase mb-3">
-              {t('settings.language')}
+              {t('settings.support')}
             </Text>
             
             <View className="bg-gray-50 dark:bg-gray-800 rounded-2xl overflow-hidden">
-              {availableLanguages.map((lang, index) => {
-                const isSelected = currentLanguage === lang.code;
-                const isLast = index === availableLanguages.length - 1;
-                
-                return (
-                  <TouchableOpacity
-                    key={lang.code}
-                    onPress={() => changeLanguage(lang.code)}
-                    className={`flex-row items-center justify-between px-4 py-4 ${
-                      !isLast ? 'border-b border-gray-200 dark:border-gray-700' : ''
-                    }`}
-                    activeOpacity={0.7}
-                  >
-                    <View className="flex-row items-center flex-1">
-                      <View className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full items-center justify-center mr-3">
-                        <Text className="text-xl">
-                          {lang.flag}
-                        </Text>
-                      </View>
-                      <View className="flex-1">
-                        <Text className="text-base font-medium text-gray-900 dark:text-white">
-                          {lang.nativeName}
-                        </Text>
-                        <Text className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
-                          {lang.name}
-                        </Text>
-                      </View>
-                    </View>
-                    {isSelected && (
-                      <CircleCheck size={24} color={Colors[colorScheme ?? 'light'].tint} />
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
+              <TouchableOpacity
+                onPress={() => router.push('/donation')}
+                className="flex-row items-center justify-between px-4 py-4 border-b border-gray-200 dark:border-gray-700"
+                activeOpacity={0.7}
+              >
+                <View className="flex-row items-center flex-1">
+                  <View className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full items-center justify-center mr-3">
+                    <Heart size={20} color={Colors[colorScheme ?? 'light'].icon} />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-base font-medium text-gray-900 dark:text-white">
+                      {t('settings.donation')}
+                    </Text>
+                    <Text className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
+                      {t('settings.donationSubtitle')}
+                    </Text>
+                  </View>
+                </View>
+                <ChevronRight size={20} color={Colors[colorScheme ?? 'light'].icon} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => Linking.openURL('mailto:dgirsandi@gmail.com')}
+                className="flex-row items-center justify-between px-4 py-4"
+                activeOpacity={0.7}
+              >
+                <View className="flex-row items-center flex-1">
+                  <View className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full items-center justify-center mr-3">
+                    <Mail size={20} color={Colors[colorScheme ?? 'light'].icon} />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-base font-medium text-gray-900 dark:text-white">
+                      {t('settings.feedback')}
+                    </Text>
+                    <Text className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
+                      {t('settings.feedbackSubtitle')}
+                    </Text>
+                  </View>
+                </View>
+                <ChevronRight size={20} color={Colors[colorScheme ?? 'light'].icon} />
+              </TouchableOpacity>
             </View>
           </View>
 
           <View className="mb-6">
             <Text className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase mb-3">
-              {t('settings.about')}
+              {t('settings.information')}
             </Text>
             
             <View className="bg-gray-50 dark:bg-gray-800 rounded-2xl overflow-hidden">
-              <View className="px-4 py-4 items-center">
-                <Text className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                  Barakah Furqan
-                </Text>
-                <Text className="text-sm text-gray-600 dark:text-gray-400">
-                  {t('settings.version')} 1.0.0
-                </Text>
-              </View>
+              <TouchableOpacity
+                onPress={() => router.push('/about')}
+                className="flex-row items-center justify-between px-4 py-4 border-b border-gray-200 dark:border-gray-700"
+                activeOpacity={0.7}
+              >
+                <View className="flex-row items-center flex-1">
+                  <View className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full items-center justify-center mr-3">
+                    <Info size={20} color={Colors[colorScheme ?? 'light'].icon} />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-base font-medium text-gray-900 dark:text-white">
+                      {t('settings.about')}
+                    </Text>
+                    <Text className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
+                      {t('settings.aboutSubtitle')}
+                    </Text>
+                  </View>
+                </View>
+                <ChevronRight size={20} color={Colors[colorScheme ?? 'light'].icon} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => router.push('/privacy-policy')}
+                className="flex-row items-center justify-between px-4 py-4"
+                activeOpacity={0.7}
+              >
+                <View className="flex-row items-center flex-1">
+                  <View className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full items-center justify-center mr-3">
+                    <FileText size={20} color={Colors[colorScheme ?? 'light'].icon} />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-base font-medium text-gray-900 dark:text-white">
+                      {t('settings.privacyPolicy')}
+                    </Text>
+                    <Text className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
+                      {t('settings.privacyPolicySubtitle')}
+                    </Text>
+                  </View>
+                </View>
+                <ChevronRight size={20} color={Colors[colorScheme ?? 'light'].icon} />
+              </TouchableOpacity>
             </View>
           </View>
         </View>

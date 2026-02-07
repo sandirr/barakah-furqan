@@ -112,6 +112,10 @@ export default function RootLayout() {
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+        <Stack.Screen name="language-modal" options={{ headerShown: false }} />
+        <Stack.Screen name="about" options={{ headerShown: false }} />
+        <Stack.Screen name="donation" options={{ headerShown: false }} />
+        <Stack.Screen name="privacy-policy" options={{ headerShown: false }} />
         <Stack.Screen name="quran/index" options={{ headerShown: false }} />
         <Stack.Screen name="quran/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="kiblat" options={{ headerShown: false }} />

@@ -69,7 +69,7 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        <View className="bg-emerald-600 dark:bg-emerald-700 rounded-3xl p-4 mb-6 shadow-lg">
+        <View className="bg-emerald-600 dark:bg-emerald-700 rounded-3xl px-6 py-4 mb-6 shadow-lg">
           <Text className="text-white text-xl font-bold mb-1">
             {t('home.greeting')}
           </Text>

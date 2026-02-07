@@ -68,10 +68,46 @@
     "appearance": "Appearance",
     "language": "Language",
     "about": "About",
+    "general": "General",
+    "preference": "Preference",
+    "support": "Support",
+    "information": "Information",
     "darkMode": "Dark Mode",
     "darkModeOn": "Dark theme enabled",
     "darkModeOff": "Light theme enabled",
-    "version": "Version"
+    "version": "Version",
+    "aboutSubtitle": "Data usage & services",
+    "feedback": "Send Feedback",
+    "feedbackSubtitle": "Email us your suggestions",
+    "donation": "Donation",
+    "donationSubtitle": "Support Barakah Furqan",
+    "privacyPolicy": "Privacy Policy",
+    "privacyPolicySubtitle": "Read our policy"
+  },
+  "privacyPolicy": {
+    "title": "Privacy Policy",
+    "updatedAtLabel": "Effective date:",
+    "updatedAtDate": "2026-02-07",
+    "content": "Barakah Furqan respects your privacy. This policy explains what data and permissions are used to provide app features.\n\nData/permissions used:\n• Location for Qibla direction and prayer times.\n• Microphone for recitation practice.\n• Internet connection to fetch prayer times and Quran data.\n• Online speech recognition for recitation analysis.\n\nHow we use data:\n• To run core features on your device.\n• To improve app reliability and support.\n\nData sharing:\n• We do not sell your data.\n• Some features use third-party services (e.g., prayer times and speech recognition) that process data according to their policies.\n\nSecurity:\n• We take reasonable measures to protect your data.\n\nChildren's privacy:\n• The app is for general audiences and does not knowingly collect personal data from children.\n\nContact:\n• Email: dgirsandi@gmail.com"
+  },
+  "about": {
+    "title": "About",
+    "description": "Barakah Furqan is designed to help you read, understand, and practice the Quran with daily spiritual support.",
+    "dataTitle": "Data & Services",
+    "dataIntro": "This app uses the following data/services to enable core features:",
+    "dataLocation": "Location access for Qibla direction and prayer times.",
+    "dataMicrophone": "Microphone access for recitation practice.",
+    "dataInternet": "Internet connection to fetch prayer times and Quran data.",
+    "dataSpeech": "Online speech recognition for recitation analysis.",
+    "notesTitle": "Disclaimer",
+    "notes": "Permissions are used only to provide app features on your device."
+  },
+  "donation": {
+    "title": "Donation",
+    "description": "You can donate via the link below or by scanning the QR code.",
+    "openLink": "Open Donation Link",
+    "qrHint": "Scan this QR to donate",
+    "disclaimer": "Donations will be used to develop Barakah Furqan and 10% will be donated to an orphanage."
   },
   "kiblat": {
     "title": "Qibla Direction",

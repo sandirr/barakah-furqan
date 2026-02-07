@@ -68,10 +68,46 @@
     "appearance": "Görünüm",
     "language": "Dil",
     "about": "Hakkında",
+    "general": "Genel",
+    "preference": "Tercihler",
+    "support": "Destek",
+    "information": "Bilgilendirme",
     "darkMode": "Karanlık Mod",
     "darkModeOn": "Karanlık tema etkin",
     "darkModeOff": "Açık tema etkin",
-    "version": "Sürüm"
+    "version": "Sürüm",
+    "aboutSubtitle": "Veri ve hizmetler",
+    "feedback": "Geri Bildirim Gönder",
+    "feedbackSubtitle": "Önerilerinizi e-posta ile gönderin",
+    "donation": "Bağış",
+    "donationSubtitle": "Barakah Furqan'ı destekleyin",
+    "privacyPolicy": "Gizlilik Politikası",
+    "privacyPolicySubtitle": "Politikamızı okuyun"
+  },
+  "privacyPolicy": {
+    "title": "Gizlilik Politikası",
+    "updatedAtLabel": "Yürürlük tarihi:",
+    "updatedAtDate": "2026-02-07",
+    "content": "Barakah Furqan gizliliğinize saygı duyar. Bu politika, uygulama özelliklerini sunmak için kullanılan veri ve izinleri açıklar.\n\nKullanılan veri/izinler:\n• Kıble yönü ve namaz vakitleri için konum.\n• Tilavet çalışması için mikrofon.\n• Namaz vakitleri ve Kur'an verilerini almak için internet bağlantısı.\n• Tilavet analizi için çevrim içi konuşma tanıma.\n\nVeriyi nasıl kullanıyoruz:\n• Cihazınızdaki temel özellikleri çalıştırmak için.\n• Uygulama güvenilirliğini ve desteği iyileştirmek için.\n\nVeri paylaşımı:\n• Verilerinizi satmayız.\n• Bazı özellikler (ör. namaz vakitleri ve konuşma tanıma) verileri kendi politikalarına göre işleyen üçüncü taraf hizmetler kullanır.\n\nGüvenlik:\n• Verilerinizi korumak için makul önlemler alırız.\n\nÇocukların gizliliği:\n• Uygulama genel kitle içindir ve çocuklardan bilerek kişisel veri toplamaz.\n\nİletişim:\n• E-posta: dgirsandi@gmail.com"
+  },
+  "about": {
+    "title": "Hakkında",
+    "description": "Barakah Furqan, Kur'an'ı okumanıza, anlamanıza ve günlük manevi destekle pratik yapmanıza yardımcı olmak için tasarlanmıştır.",
+    "dataTitle": "Veri ve Hizmetler",
+    "dataIntro": "Bu uygulama temel özellikler için şu veri/hizmetleri kullanır:",
+    "dataLocation": "Kıble yönü ve namaz vakitleri için konum erişimi.",
+    "dataMicrophone": "Tilavet pratiği için mikrofon erişimi.",
+    "dataInternet": "Namaz vakitleri ve Kur'an verileri için internet bağlantısı.",
+    "dataSpeech": "Tilavet analizi için çevrim içi konuşma tanıma.",
+    "notesTitle": "Feragat",
+    "notes": "İzinler yalnızca cihazınızdaki uygulama özelliklerini sağlamak için kullanılır."
+  },
+  "donation": {
+    "title": "Bağış",
+    "description": "Aşağıdaki bağlantıdan veya QR kodu tarayarak bağış yapabilirsiniz.",
+    "openLink": "Bağış Bağlantısını Aç",
+    "qrHint": "Bağış için bu QR'ı tarayın",
+    "disclaimer": "Bağışlar Barakah Furqan'ın geliştirilmesi için kullanılacak ve %10'u yetimhaneye bağışlanacaktır."
   },
   "kiblat": {
     "title": "Kıble Yönü",

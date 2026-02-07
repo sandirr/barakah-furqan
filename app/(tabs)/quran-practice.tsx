@@ -3,6 +3,10 @@ import { Audio } from 'expo-av';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams } from 'expo-router';
 import {
+  ExpoSpeechRecognitionModule,
+  useSpeechRecognitionEvent
+} from 'expo-speech-recognition';
+import {
   CircleCheck,
   Info,
   Mic,
@@ -13,7 +17,7 @@ import {
   X,
 } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
-import Tts from 'react-native-tts';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Alert,
@@ -24,12 +28,8 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import {
-  ExpoSpeechRecognitionModule,
-  useSpeechRecognitionEvent
-} from 'expo-speech-recognition';
+import Tts from 'react-native-tts';
 
 // ========================================
 // TYPE DEFINITIONS
@@ -685,7 +685,7 @@ export default function TilawahScreen() {
 
   if (!hasMicPermission) {
     return (
-      <SafeAreaView className="flex-1 bg-teal-600 dark:bg-teal-700">
+      <SafeAreaView className="flex-1 bg-teal-600 dark:bg-teal-700" edges={["top"]}>
         <View className="p-4">
           <Text className="text-2xl font-bold text-white">{t('tilawah.title')}</Text>
         </View>

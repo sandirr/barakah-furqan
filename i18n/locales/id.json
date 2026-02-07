@@ -68,10 +68,46 @@
     "appearance": "Tampilan",
     "language": "Bahasa",
     "about": "Tentang",
+    "general": "Umum",
+    "preference": "Preferensi",
+    "support": "Dukungan",
+    "information": "Informasi",
     "darkMode": "Mode Gelap",
     "darkModeOn": "Tema gelap diaktifkan",
     "darkModeOff": "Tema terang diaktifkan",
-    "version": "Versi"
+    "version": "Versi",
+    "aboutSubtitle": "Data & layanan",
+    "feedback": "Kirim Masukan",
+    "feedbackSubtitle": "Email saran Anda",
+    "donation": "Donasi",
+    "donationSubtitle": "Dukung Barakah Furqan",
+    "privacyPolicy": "Kebijakan Privasi",
+    "privacyPolicySubtitle": "Baca kebijakan kami"
+  },
+  "privacyPolicy": {
+    "title": "Kebijakan Privasi",
+    "updatedAtLabel": "Tanggal berlaku:",
+    "updatedAtDate": "2026-02-07",
+    "content": "Barakah Furqan menghargai privasi Anda. Kebijakan ini menjelaskan data dan izin yang digunakan untuk menyediakan fitur aplikasi.\n\nData/izin yang digunakan:\n• Lokasi untuk arah kiblat dan waktu shalat.\n• Mikrofon untuk latihan tilawah.\n• Koneksi internet untuk mengambil jadwal shalat dan data Al-Quran.\n• Pengenalan suara online untuk analisis bacaan.\n\nCara penggunaan data:\n• Menjalankan fitur utama di perangkat Anda.\n• Meningkatkan keandalan aplikasi dan dukungan.\n\nBerbagi data:\n• Kami tidak menjual data Anda.\n• Beberapa fitur menggunakan layanan pihak ketiga (mis. jadwal shalat dan pengenalan suara) yang memproses data sesuai kebijakan mereka.\n\nKeamanan:\n• Kami melakukan langkah yang wajar untuk melindungi data Anda.\n\nPrivasi anak:\n• Aplikasi ini untuk audiens umum dan tidak dengan sengaja mengumpulkan data pribadi anak.\n\nKontak:\n• Email: dgirsandi@gmail.com"
+  },
+  "about": {
+    "title": "Tentang",
+    "description": "Barakah Furqan dirancang untuk membantu Anda membaca, memahami, dan berlatih Al-Quran dengan dukungan spiritual harian.",
+    "dataTitle": "Data & Layanan",
+    "dataIntro": "Aplikasi ini menggunakan data/layanan berikut untuk menjalankan fitur utama:",
+    "dataLocation": "Akses lokasi untuk arah kiblat dan waktu shalat.",
+    "dataMicrophone": "Akses mikrofon untuk latihan tilawah.",
+    "dataInternet": "Koneksi internet untuk mengambil jadwal shalat dan data Al-Quran.",
+    "dataSpeech": "Pengenalan suara online untuk analisis bacaan.",
+    "notesTitle": "Disclaimer",
+    "notes": "Izin hanya digunakan untuk menyediakan fitur aplikasi di perangkat Anda."
+  },
+  "donation": {
+    "title": "Donasi",
+    "description": "Anda bisa berdonasi melalui tautan di bawah atau dengan memindai QR.",
+    "openLink": "Buka Tautan Donasi",
+    "qrHint": "Pindai QR ini untuk berdonasi",
+    "disclaimer": "Donasi akan digunakan untuk pengembangan Barakah Furqan dan 10% nya akan disalurkan ke panti asuhan."
   },
   "kiblat": {
     "title": "Arah Kiblat",
