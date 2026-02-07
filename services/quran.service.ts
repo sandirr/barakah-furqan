@@ -85,7 +85,7 @@ class QuranService {
       },
       en: { 
         translation: 'en.sahih', 
-        tafsir: 'en.maududi',
+        tafsir: 'en.sahih',
         hasTranslation: true
       },
       ms: { 
@@ -95,13 +95,28 @@ class QuranService {
       },
       ur: { 
         translation: 'ur.ahmedali', 
-        tafsir: 'ur.jalandhry',
+        tafsir: 'ur.ahmedali',
+        hasTranslation: true
+      },
+      tr: { 
+        translation: 'tr.ates', 
+        tafsir: 'tr.ates',
         hasTranslation: true
       },
       ar: { 
         translation: '', 
         tafsir: 'ar.jalalayn',
         hasTranslation: false
+      },
+      bn: { 
+        translation: 'bn.bengali', 
+        tafsir: 'bn.bengali',
+        hasTranslation: true
+      },
+      fa: { 
+        translation: 'fa.ayati', 
+        tafsir: 'fa.ayati',
+        hasTranslation: true
       },
     };
 

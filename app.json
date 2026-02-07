@@ -47,7 +47,16 @@
           }
         }
       ],
-      "expo-audio"
+      "expo-audio",
+      "expo-speech-recognition",
+      [
+        "expo-notifications",
+        {
+          "sounds": [
+            "./assets/adzan.mp3"
+          ]
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

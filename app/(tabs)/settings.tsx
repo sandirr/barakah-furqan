@@ -1,7 +1,7 @@
-import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useLanguage } from '@/hooks/use-language';
+import { CircleCheck, Moon, Sun } from 'lucide-react-native';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, Switch, Text, TouchableOpacity, View } from 'react-native';
@@ -36,11 +36,11 @@ export default function SettingsScreen() {
               <View className="flex-row items-center justify-between px-4 py-4">
                 <View className="flex-row items-center flex-1">
                   <View className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full items-center justify-center mr-3">
-                    <IconSymbol 
-                      size={20} 
-                      name={isDark ? "dark-mode" : "light-mode"} 
-                      color={Colors[colorScheme ?? 'light'].icon} 
-                    />
+                    {isDark ? (
+                      <Moon size={20} color={Colors[colorScheme ?? 'light'].icon} />
+                    ) : (
+                      <Sun size={20} color={Colors[colorScheme ?? 'light'].icon} />
+                    )}
                   </View>
                   <View className="flex-1">
                     <Text className="text-base font-medium text-gray-900 dark:text-white">
@@ -96,11 +96,7 @@ export default function SettingsScreen() {
                       </View>
                     </View>
                     {isSelected && (
-                      <IconSymbol 
-                        size={24} 
-                        name="check-circle" 
-                        color={Colors[colorScheme ?? 'light'].tint} 
-                      />
+                      <CircleCheck size={24} color={Colors[colorScheme ?? 'light'].tint} />
                     )}
                   </TouchableOpacity>
                 );

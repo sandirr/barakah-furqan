@@ -1,8 +1,19 @@
-import { IconSymbol } from '@/components/ui/icon-symbol';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
 import { router } from 'expo-router';
+import {
+  ArrowLeft,
+  Building2,
+  Info,
+  Landmark,
+  LocateFixed,
+  MapPin,
+  Navigation2,
+  RefreshCw,
+  TriangleAlert,
+  X
+} from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -357,7 +368,7 @@ export default function KiblatScreen() {
         <View className="p-4 bg-teal-600 dark:bg-teal-700">
           <View className="flex-row items-center">
             <TouchableOpacity onPress={() => router.back()} className="mr-3">
-              <IconSymbol size={24} name="arrow-back" color="#FFFFFF" />
+              <ArrowLeft size={24} color="#FFFFFF" />
             </TouchableOpacity>
             <Text className="text-2xl font-bold text-white flex-1">
               {t('kiblat.title')}
@@ -366,7 +377,7 @@ export default function KiblatScreen() {
         </View>
         
         <View className="flex-1 items-center justify-center px-6 bg-white dark:bg-gray-900">
-          <IconSymbol size={64} name="warning" color="#f59e0b" />
+          <TriangleAlert size={64} color="#f59e0b" />
           <Text className="text-gray-900 dark:text-white text-center mt-4 text-xl font-bold">
             {t('kiblat.requirementsNotMet')}
           </Text>
@@ -374,7 +385,7 @@ export default function KiblatScreen() {
           <View className="w-full mt-4">
             <View className="p-4 rounded-xl bg-red-50 dark:bg-red-950">
               <View className="flex-row items-center mb-2">
-                <IconSymbol size={24} name="cancel" color="#dc2626" />
+                <X size={24} color="#dc2626" />
                 <Text className="ml-2 font-semibold text-red-700 dark:text-red-300">
                   {t('kiblat.locationPermission')}
                 </Text>
@@ -411,7 +422,7 @@ export default function KiblatScreen() {
       <View className="p-4 bg-teal-600 dark:bg-teal-700">
         <View className="flex-row items-center mb-2">
           <TouchableOpacity onPress={() => router.back()} className="mr-3">
-            <IconSymbol size={24} name="arrow-back" color="#FFFFFF" />
+            <ArrowLeft size={24} color="#FFFFFF" />
           </TouchableOpacity>
           <Text className="text-2xl font-bold text-white flex-1">
             {t('kiblat.title')}
@@ -424,7 +435,7 @@ export default function KiblatScreen() {
             {updatingLocation ? (
               <ActivityIndicator size={21} color="#FFFFFF" />
             ) : (
-              <IconSymbol size={20} name="refresh" color="#FFFFFF" />
+              <RefreshCw size={20} color="#FFFFFF" />
             )}
           </TouchableOpacity>
         </View>
@@ -435,7 +446,7 @@ export default function KiblatScreen() {
             </Text>
             {location && (
               <View className="flex-row items-center">
-                <IconSymbol size={14} name="location-on" color="#d1fae5" />
+                <MapPin size={14} color="#d1fae5" />
                 <Text className="text-teal-100 text-xs ml-1">
                   {locationName || `${location.lat.toFixed(4)}°, ${location.lng.toFixed(4)}°`}
                 </Text>
@@ -466,7 +477,7 @@ export default function KiblatScreen() {
             <View className="flex-1 bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
               <View className="flex-row items-center">
                 <View className="w-10 h-10 bg-teal-100 dark:bg-teal-900 rounded-full items-center justify-center mr-3">
-                  <IconSymbol size={20} name="navigation" color="#0d9488" />
+                  <Navigation2 size={20} color="#0d9488" />
                 </View>
                 <View className="flex-1">
                   <Text className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -482,7 +493,7 @@ export default function KiblatScreen() {
             <View className="flex-1 bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
               <View className="flex-row items-center">
                 <View className="w-10 h-10 bg-teal-100 dark:bg-teal-900 rounded-full items-center justify-center mr-3">
-                  <IconSymbol size={20} name="place" color="#0d9488" />
+                  <MapPin size={20} color="#0d9488" />
                 </View>
                 <View className="flex-1">
                   <Text className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -576,7 +587,7 @@ export default function KiblatScreen() {
             >
               <View className="items-center" style={{ width: 50, marginTop: -(COMPASS_SIZE - 20) / 2 + 40 }}>
                 <View className="w-12 h-12 bg-teal-600 dark:bg-teal-700 rounded-full items-center justify-center shadow-lg">
-                  <IconSymbol size={24} name="mosque" color="#FFFFFF" />
+                  <Landmark size={24} color="#FFFFFF" />
                 </View>
                 <View className="w-1 h-12 bg-teal-600 dark:bg-teal-700 mt-1" />
                 <View 
@@ -611,7 +622,7 @@ export default function KiblatScreen() {
               {locationName && (
                 <View className="flex-row items-center mb-3">
                   <View className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full items-center justify-center mr-3">
-                    <IconSymbol size={20} name="location-city" color="#2563eb" />
+                    <Building2 size={20} color="#2563eb" />
                   </View>
                   <View className="flex-1">
                     <Text className="text-xs text-gray-500 dark:text-gray-400 mb-1">
@@ -625,7 +636,7 @@ export default function KiblatScreen() {
               )}
               <View className="flex-row items-center">
                 <View className="w-10 h-10 bg-teal-100 dark:bg-teal-900 rounded-full items-center justify-center mr-3">
-                  <IconSymbol size={20} name="my-location" color="#0d9488" />
+                  <LocateFixed size={20} color="#0d9488" />
                 </View>
                 <View className="flex-1">
                   <Text className="text-xs text-gray-500 dark:text-gray-400 mb-1">
@@ -648,7 +659,7 @@ export default function KiblatScreen() {
             style={{ borderRadius: 16, padding: 24 }}
           >
             <View className="flex-row items-center mb-3">
-              <IconSymbol size={24} name="info" color="#059669" />
+              <Info size={24} color="#059669" />
               <Text className="text-lg font-semibold text-gray-900 dark:text-white ml-2">
                 {t('kiblat.howToUse')}
               </Text>

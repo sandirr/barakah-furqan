@@ -9,7 +9,7 @@ const ADHAN_ENABLED_KEY = '@adhan_enabled';
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
-    shouldPlaySound: false,
+    shouldPlaySound: true,
     shouldSetBadge: false,
     shouldShowBanner: true,
     shouldShowList: true,
@@ -63,7 +63,7 @@ class NotificationService {
           title: `Waktu ${prayerName}`,
           body: `Saatnya menunaikan shalat ${prayerName}`,
           data: { prayerName, identifier },
-          sound: false,
+          sound: 'adzan.mp3',
         },
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.DAILY,
@@ -85,7 +85,8 @@ class NotificationService {
         content: {
           title: 'Test Notifikasi',
           body: 'Notifikasi berfungsi dengan baik! ✅',
-          data: { test: true },
+          data: { test: true, identifier: 'test' },
+          sound: 'adzan.mp3',
         },
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,

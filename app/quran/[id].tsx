@@ -260,7 +260,7 @@ export default function SurahDetailScreen() {
     const isPlaying = playingAyah === item.numberInSurah;
     const sizes = getFontSize();
 
-    const removeBasmalah = surah && surah.number !== 1 && surah.number !== 9 && item.numberInSurah === 1;
+    const removeBasmalah = item.numberInSurah === 1 && surah && surah.number !== 1 && surah.number !== 9;
     const verseText = removeBasmalah ? quranService.filterBasmalah(item.text) : item.text;
 
     return (
@@ -325,7 +325,7 @@ export default function SurahDetailScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-emerald-600 dark:bg-emerald-700" edges={["top"]}>
+    <SafeAreaView className="flex-1 bg-emerald-600 dark:bg-emerald-700" edges={["top", "bottom"]}>
       <View className="p-4 bg-emerald-600 dark:bg-emerald-700">
         <View className="flex-row items-center">
           <TouchableOpacity onPress={() => router.back()} className="mr-3">

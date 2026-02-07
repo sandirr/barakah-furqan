@@ -1,9 +1,28 @@
-import { IconSymbol } from '@/components/ui/icon-symbol';
 import { notificationService } from '@/services/notification.service';
 import { PrayerTimes, prayerTimesService } from '@/services/prayer-times.service';
 import NetInfo from '@react-native-community/netinfo';
 import * as Location from 'expo-location';
+import * as Notifications from 'expo-notifications';
 import { router } from 'expo-router';
+import {
+  ArrowLeft,
+  Bell,
+  Building2,
+  CircleCheck,
+  Clock,
+  LocateFixed,
+  MapPin,
+  Moon,
+  RefreshCw,
+  Sun,
+  SunDim,
+  Sunrise,
+  Sunset,
+  TriangleAlert,
+  Volume2,
+  X,
+  type LucideIcon
+} from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -47,6 +66,27 @@ export default function ShalatScreen() {
     }, 60000);
 
     return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const receivedSubscription = Notifications.addNotificationReceivedListener((notification) => {
+      const data = notification.request.content.data as { identifier?: string };
+      if (data?.identifier) {
+        notificationService.playAdhan();
+      }
+    });
+
+    const responseSubscription = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response.notification.request.content.data as { identifier?: string };
+      if (data?.identifier) {
+        notificationService.playAdhan();
+      }
+    });
+
+    return () => {
+      receivedSubscription.remove();
+      responseSubscription.remove();
+    };
   }, []);
 
   useEffect(() => {
@@ -315,15 +355,16 @@ export default function ShalatScreen() {
     }
   };
 
-  const getPrayerIcon = (name: string): any => {
-    const icons: { [key: string]: any } = {
-      'Fajr': 'nightlight',
-      'Dhuhr': 'wb-sunny',
-      'Asr': 'wb-twilight',
-      'Maghrib': 'nights-stay',
-      'Isha': 'dark-mode',
+  const getPrayerIcon = (name: string): LucideIcon => {
+    const icons: Record<string, LucideIcon> = {
+      Fajr: Sunrise,
+      Dhuhr: Sun,
+      Asr: SunDim,
+      Maghrib: Sunset,
+      Isha: Moon,
     };
-    return icons[name] || 'schedule';
+
+    return icons[name] || Clock;
   };
 
   if (checkingRequirements) {
@@ -356,7 +397,7 @@ export default function ShalatScreen() {
         <View className="p-4 bg-green-600 dark:bg-green-700">
           <View className="flex-row items-center">
             <TouchableOpacity onPress={() => router.back()} className="mr-3">
-              <IconSymbol size={24} name="arrow-back" color="#FFFFFF" />
+              <ArrowLeft size={24} color="#FFFFFF" />
             </TouchableOpacity>
             <Text className="text-2xl font-bold text-white flex-1">
               {t('shalat.title')}
@@ -365,7 +406,7 @@ export default function ShalatScreen() {
         </View>
         
         <View className="flex-1 items-center justify-center px-6 bg-white dark:bg-gray-900">
-          <IconSymbol size={64} name="warning" color="#f59e0b" />
+          <TriangleAlert size={64} color="#f59e0b" />
           <Text className="text-gray-900 dark:text-white text-center mt-4 text-xl font-bold">
             {t('shalat.requirementsNotMet')}
           </Text>
@@ -373,11 +414,11 @@ export default function ShalatScreen() {
           <View className="w-full mt-4 gap-y-4">
             <View className={`p-4 rounded-xl mb-4 ${hasLocationPermission ? 'bg-green-50 dark:bg-green-950' : 'bg-red-50 dark:bg-red-950'}`}>
               <View className="flex-row items-center mb-2">
-                <IconSymbol 
-                  size={24} 
-                  name={hasLocationPermission ? 'check-circle' : 'cancel'} 
-                  color={hasLocationPermission ? '#16a34a' : '#dc2626'} 
-                />
+                {hasLocationPermission ? (
+                  <CircleCheck size={24} color="#16a34a" />
+                ) : (
+                  <X size={24} color="#dc2626" />
+                )}
                 <Text className={`ml-2 font-semibold ${hasLocationPermission ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
                   {t('shalat.locationPermission')}
                 </Text>
@@ -399,11 +440,11 @@ export default function ShalatScreen() {
 
             <View className={`p-4 rounded-xl ${hasInternet ? 'bg-green-50 dark:bg-green-950' : 'bg-red-50 dark:bg-red-950'}`}>
               <View className="flex-row items-center mb-2">
-                <IconSymbol 
-                  size={24} 
-                  name={hasInternet ? 'check-circle' : 'cancel'} 
-                  color={hasInternet ? '#16a34a' : '#dc2626'} 
-                />
+                {hasInternet ? (
+                  <CircleCheck size={24} color="#16a34a" />
+                ) : (
+                  <X size={24} color="#dc2626" />
+                )}
                 <Text className={`ml-2 font-semibold ${hasInternet ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
                   {t('shalat.internetConnection')}
                 </Text>
@@ -442,7 +483,7 @@ export default function ShalatScreen() {
       <View className="p-4 bg-green-600 dark:bg-green-700">
         <View className="flex-row items-center mb-2">
           <TouchableOpacity onPress={() => router.back()} className="mr-3">
-            <IconSymbol size={24} name="arrow-back" color="#FFFFFF" />
+            <ArrowLeft size={24} color="#FFFFFF" />
           </TouchableOpacity>
           <Text className="text-2xl font-bold text-white flex-1">
             {t('shalat.title')}
@@ -455,7 +496,7 @@ export default function ShalatScreen() {
             {refreshing ? (
               <ActivityIndicator size={21} color="#FFFFFF" />
             ) : (
-              <IconSymbol size={20} name="refresh" color="#FFFFFF" />
+              <RefreshCw size={20} color="#FFFFFF" />
             )}
           </TouchableOpacity>
         </View>
@@ -466,7 +507,7 @@ export default function ShalatScreen() {
             </Text>
             {location && (
               <View className="flex-row items-center">
-                <IconSymbol size={14} name="location-on" color="#d1fae5" />
+                <MapPin size={14} color="#d1fae5" />
                 <Text className="text-green-100 text-xs ml-1">
                   {locationName || `${location.lat.toFixed(4)}°, ${location.lng.toFixed(4)}°`}
                 </Text>
@@ -518,27 +559,31 @@ export default function ShalatScreen() {
             </Text>
           </View>
           
-          {prayerTimes && prayerTimesService.getPrayerList(prayerTimes).map((prayer, index) => (
-            <View
-              key={prayer.name}
-              className={`flex-row items-center p-4 ${
-                index !== 4 ? 'border-b border-gray-100 dark:border-gray-700' : ''
-              } ${nextPrayer?.name === prayer.name ? 'bg-green-50 dark:bg-green-950' : ''}`}
-            >
-              <View className="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-xl items-center justify-center mr-4">
-                <IconSymbol size={24} name={getPrayerIcon(prayer.name)} color="#059669" />
-              </View>
-              <View className="flex-1">
-                <Text className="text-lg font-bold text-gray-900 dark:text-white">
-                  {t(`shalat.${prayer.name.toLowerCase()}`)}
+          {prayerTimes && prayerTimesService.getPrayerList(prayerTimes).map((prayer, index) => {
+            const PrayerIcon = getPrayerIcon(prayer.name);
+
+            return (
+              <View
+                key={prayer.name}
+                className={`flex-row items-center p-4 ${
+                  index !== 4 ? 'border-b border-gray-100 dark:border-gray-700' : ''
+                } ${nextPrayer?.name === prayer.name ? 'bg-green-50 dark:bg-green-950' : ''}`}
+              >
+                <View className="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-xl items-center justify-center mr-4">
+                  <PrayerIcon size={24} color="#059669" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-lg font-bold text-gray-900 dark:text-white">
+                    {t(`shalat.${prayer.name.toLowerCase()}`)}
+                  </Text>
+                  <Text className="text-sm text-gray-500 dark:text-gray-400">{prayer.arabic}</Text>
+                </View>
+                <Text className="text-xl font-bold text-gray-900 dark:text-white">
+                  {prayer.time}
                 </Text>
-                <Text className="text-sm text-gray-500 dark:text-gray-400">{prayer.arabic}</Text>
               </View>
-              <Text className="text-xl font-bold text-gray-900 dark:text-white">
-                {prayer.time}
-              </Text>
-            </View>
-          ))}
+            );
+          })}
         </View>
 
         {location && (
@@ -552,7 +597,7 @@ export default function ShalatScreen() {
               {locationName && (
                 <View className="flex-row items-center mb-3">
                   <View className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full items-center justify-center mr-3">
-                    <IconSymbol size={20} name="location-city" color="#2563eb" />
+                    <Building2 size={20} color="#2563eb" />
                   </View>
                   <View className="flex-1">
                     <Text className="text-xs text-gray-500 dark:text-gray-400 mb-1">
@@ -566,7 +611,7 @@ export default function ShalatScreen() {
               )}
               <View className="flex-row items-center">
                 <View className="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-full items-center justify-center mr-3">
-                  <IconSymbol size={20} name="my-location" color="#059669" />
+                  <LocateFixed size={20} color="#059669" />
                 </View>
                 <View className="flex-1">
                   <Text className="text-xs text-gray-500 dark:text-gray-400 mb-1">
@@ -633,7 +678,7 @@ export default function ShalatScreen() {
             onPress={testAdhan}
             className="bg-green-100 dark:bg-green-900 rounded-2xl p-4 flex-row items-center justify-center mb-3"
           >
-            <IconSymbol size={24} name="volume-up" color="#059669" />
+            <Volume2 size={24} color="#059669" />
             <Text className="text-green-700 dark:text-green-300 font-semibold ml-2">
               {t('shalat.testAdhan')}
             </Text>
@@ -645,7 +690,7 @@ export default function ShalatScreen() {
             onPress={testNotification}
             className="bg-blue-100 dark:bg-blue-900 rounded-2xl p-4 flex-row items-center justify-center"
           >
-            <IconSymbol size={24} name="notifications" color="#2563eb" />
+            <Bell size={24} color="#2563eb" />
             <Text className="text-blue-700 dark:text-blue-300 font-semibold ml-2">
               {t('shalat.testNotification')}
             </Text>

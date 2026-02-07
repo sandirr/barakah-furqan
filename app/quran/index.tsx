@@ -115,7 +115,7 @@ export default function QuranListScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-emerald-600 dark:bg-emerald-700" edges={["top"]}>
+    <SafeAreaView className="flex-1 bg-emerald-600 dark:bg-emerald-700" edges={["top", "bottom"]}>
       <View className='bg-white dark:bg-gray-900 flex-1'>
         <View className="p-4 bg-emerald-600 dark:bg-emerald-700">
           <View className="flex-row items-center mb-2">

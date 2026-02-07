@@ -1,7 +1,6 @@
-import { IconSymbol } from '@/components/ui/icon-symbol';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { Book, Clock9, Compass, Info } from "lucide-react-native";
+import { Book, ChevronRight, Clock9, Compass, Info } from "lucide-react-native";
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Image, ScrollView, Text, TouchableOpacity, useColorScheme, View } from 'react-native';
@@ -71,10 +70,10 @@ export default function HomeScreen() {
         </View>
 
         <View className="bg-emerald-600 dark:bg-emerald-700 rounded-3xl p-4 mb-6 shadow-lg">
-          <Text className="text-white text-xl font-bold mb-1 text-center">
+          <Text className="text-white text-xl font-bold mb-1">
             {t('home.greeting')}
           </Text>
-          <Text className="text-emerald-50 text-sm text-center">
+          <Text className="text-emerald-50 text-base">
             {t('home.description')}
           </Text>
         </View>
@@ -95,11 +94,11 @@ export default function HomeScreen() {
                   <Text className="text-xl font-bold text-gray-900 dark:text-white">
                     {item.title}
                   </Text>
-                  <Text className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  <Text className="text-base text-gray-500 dark:text-gray-400 mt-1">
                     {t(`home.${item.id}Description`)}
                   </Text>
                 </View>
-                <IconSymbol size={24} name="chevron-right" color="#9CA3AF" />
+                <ChevronRight size={24} color="#9CA3AF" />
               </View>
             </TouchableOpacity>
           ))}
@@ -117,10 +116,10 @@ export default function HomeScreen() {
               {t('home.dailyReminder')}
             </Text>
           </View>
-          <Text className="text-gray-700 dark:text-gray-300 leading-6 mb-2 text-sm">
+          <Text className="text-gray-700 dark:text-gray-300 leading-6 mb-2 text-base">
             {reminder.text}
           </Text>
-          <Text className="text-emerald-700 dark:text-emerald-400 text-sm italic">
+          <Text className="text-emerald-700 dark:text-emerald-400 text-base italic">
             {reminder.verse}
           </Text>
         </LinearGradient>

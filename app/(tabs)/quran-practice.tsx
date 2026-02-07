@@ -1,93 +1,97 @@
-import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import {
-  AudioModule,
-  RecordingOptions,
-  useAudioRecorder
-} from 'expo-audio';
-import * as FileSystem from 'expo-file-system/legacy';
+import { Audio } from 'expo-av';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams } from 'expo-router';
+import {
+  CircleCheck,
+  Info,
+  Mic,
+  MicOff,
+  Play,
+  RefreshCw,
+  Square,
+  X,
+} from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
+import Tts from 'react-native-tts';
+import {
+  ActivityIndicator,
+  Alert,
+  Linking,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert, Linking, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { initWhisper, WhisperContext } from 'whisper.rn';
+import {
+  ExpoSpeechRecognitionModule,
+  useSpeechRecognitionEvent
+} from 'expo-speech-recognition';
+
+// ========================================
+// TYPE DEFINITIONS
+// ========================================
 
 interface Word {
   text: string;
   status: 'pending' | 'correct' | 'incorrect' | 'current';
+  spokenText?: string;
 }
 
-const MODEL_URL = 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin';
-const MODEL_SIZE_MB = 148;
-const MODEL_NAME = 'ggml-base.bin';
-const RECORDING_INTERVAL = 3000;
+// ========================================
+// CONSTANTS
+// ========================================
 
-const recordingOptions: RecordingOptions = {
-  isMeteringEnabled: false,
-  extension: '.m4a',
-  sampleRate: 16000,
-  numberOfChannels: 1,
-  bitRate: 128000,
-  android: {
-    extension: '.m4a',
-    sampleRate: 16000,
-    outputFormat: 'mpeg4',
-    audioEncoder: 'aac',
-  },
-  ios: {
-    extension: '.m4a',
-    sampleRate: 16000,
-    audioQuality: 127,
-  },
-  web: {
-    mimeType: 'audio/webm',
-    bitsPerSecond: 128000,
-  },
-};
+const SPEECH_LANG = 'ar-SA';
+const RECOGNITION_TIMEOUT_MS = 15000;
+const MAX_RECOGNITION_RETRIES = 1;
+
+// ========================================
+// MAIN COMPONENT
+// ========================================
 
 export default function TilawahScreen() {
   const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
   const params = useLocalSearchParams();
-  const audioRecorder = useAudioRecorder(recordingOptions);
   
+  // States
   const [inputText, setInputText] = useState('');
   const [words, setWords] = useState<Word[]>([]);
   const [isRecording, setIsRecording] = useState(false);
   const [isInitializing, setIsInitializing] = useState(false);
-  const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [progress, setProgress] = useState(0);
-  const [whisperContext, setWhisperContext] = useState<WhisperContext | null>(null);
   const [sessionComplete, setSessionComplete] = useState(false);
   const [score, setScore] = useState({ correct: 0, total: 0 });
   
-  const [modelDownloaded, setModelDownloaded] = useState(false);
-  const [isDownloading, setIsDownloading] = useState(false);
-  const [downloadProgress, setDownloadProgress] = useState(0);
-  const [checkingModel, setCheckingModel] = useState(true);
-  
   const [hasMicPermission, setHasMicPermission] = useState(false);
   const [checkingPermission, setCheckingPermission] = useState(true);
+  const [isListening, setIsListening] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [lastHeard, setLastHeard] = useState('');
+  const [isMicTestActive, setIsMicTestActive] = useState(false);
+  
+  // Refs
+  const recognitionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const micTestTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingSpeakTypeRef = useRef<'sentence' | null>(null);
+  const processingRef = useRef(false);
+  const lastTranscriptRef = useRef('');
+  const hasFinalResultRef = useRef(false);
+  const retryCountRef = useRef(0);
+  const wordsRef = useRef<Word[]>([]);
+  const sessionActiveRef = useRef(false);
 
-  const recordingTimer = useRef<NodeJS.Timeout | any>(null);
-  const modelPath = `${FileSystem.documentDirectory}${MODEL_NAME}`;
+  // ========================================
+  // LIFECYCLE
+  // ========================================
 
   useEffect(() => {
     initializeScreen();
-    
-    return () => {
-      if (audioRecorder?.isRecording) {
-        audioRecorder.stop();
-      }
-      if (whisperContext) {
-        whisperContext.release().catch(() => {});
-      }
-      if (recordingTimer.current) {
-        clearTimeout(recordingTimer.current);
-      }
-    };
+    return () => { cleanup(); };
   }, []);
 
   useEffect(() => {
@@ -96,16 +100,105 @@ export default function TilawahScreen() {
     }
   }, [params.text]);
 
-  const initializeScreen = async () => {
-    await checkPermissions();
-    await checkModelExists();
+  useEffect(() => {
+    wordsRef.current = words;
+  }, [words]);
+
+  useSpeechRecognitionEvent('start', () => {
+    setIsListening(true);
+  });
+
+  useSpeechRecognitionEvent('end', () => {
+    setIsListening(false);
+    if (sessionActiveRef.current && !processingRef.current) {
+      const fallbackTranscript = lastTranscriptRef.current;
+      handleTranscript(fallbackTranscript);
+    }
+  });
+
+  useSpeechRecognitionEvent('result', (event) => {
+    const transcript = event.results?.[0]?.transcript?.trim() ?? '';
+    if (transcript) {
+      lastTranscriptRef.current = transcript;
+      setLastHeard(transcript);
+    }
+    if (!event.isFinal) return;
+    hasFinalResultRef.current = true;
+    handleTranscript(transcript || lastTranscriptRef.current);
+  });
+
+  useSpeechRecognitionEvent('nomatch', () => {
+    handleTranscript('');
+  });
+
+  useSpeechRecognitionEvent('error', (event) => {
+    if (event.error === 'aborted') return;
+    handleTranscript('');
+  });
+
+  // ========================================
+  // INITIALIZATION & CLEANUP
+  // ========================================
+
+  const cleanup = async () => {
+    try {
+      await ExpoSpeechRecognitionModule.abort();
+      await Tts.stop();
+    } catch (e) {
+      console.log('Error stopping recognition:', e);
+    }
+    
+    if (recognitionTimer.current) {
+      clearTimeout(recognitionTimer.current);
+    }
+    if (micTestTimer.current) {
+      clearTimeout(micTestTimer.current);
+    }
   };
+
+  const initializeScreen = async () => {
+    await setupAudio();
+    await checkPermissions();
+    await setupTts();
+  };
+
+  const setupAudio = async () => {
+    try {
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: false,
+        shouldDuckAndroid: true,
+        playThroughEarpieceAndroid: false,
+      });
+    } catch (error) {
+      console.error('Error setting up audio:', error);
+    }
+  };
+
+  const setupTts = async () => {
+    setIsInitializing(true);
+    try {
+      await Tts.getInitStatus();
+      await Tts.setDefaultLanguage(SPEECH_LANG);
+      await Tts.setDefaultRate(0.5);
+      await Tts.setDefaultPitch(1.0);
+    } catch (error) {
+      console.error('Error setting up TTS:', error);
+    } finally {
+      setIsInitializing(false);
+    }
+  };
+
+  // ========================================
+  // PERMISSIONS
+  // ========================================
 
   const checkPermissions = async () => {
     setCheckingPermission(true);
     try {
-      const { granted } = await AudioModule.getRecordingPermissionsAsync();
-      setHasMicPermission(granted);
+      const { status } = await ExpoSpeechRecognitionModule.getPermissionsAsync();
+      setHasMicPermission(status === 'granted');
     } catch (error) {
       console.error('Error checking permissions:', error);
       setHasMicPermission(false);
@@ -116,10 +209,10 @@ export default function TilawahScreen() {
 
   const requestPermissions = async () => {
     try {
-      const { granted } = await AudioModule.requestRecordingPermissionsAsync();
-      setHasMicPermission(granted);
+      const { status } = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+      setHasMicPermission(status === 'granted');
       
-      if (!granted) {
+      if (status !== 'granted') {
         Alert.alert(
           t('tilawah.permissionRequired'),
           t('tilawah.permissionRequiredDesc'),
@@ -133,264 +226,421 @@ export default function TilawahScreen() {
       console.error('Error requesting permissions:', error);
     }
   };
-
-  const checkModelExists = async () => {
-    try {
-      const fileInfo = await FileSystem.getInfoAsync(modelPath);
-      setModelDownloaded(fileInfo.exists);
-    } catch (error) {
-      console.error('Error checking model:', error);
-    } finally {
-      setCheckingModel(false);
-    }
-  };
-
-  const downloadModel = async () => {
-    setIsDownloading(true);
-    setDownloadProgress(0);
-
-    try {
-      const callback = (downloadProgress: FileSystem.DownloadProgressData) => {
-        const progress = downloadProgress.totalBytesWritten / downloadProgress.totalBytesExpectedToWrite;
-        setDownloadProgress(Math.round(progress * 100));
-      };
-
-      const downloadResumable = FileSystem.createDownloadResumable(
-        MODEL_URL,
-        modelPath,
-        {},
-        callback
-      );
-
-      const result = await downloadResumable.downloadAsync();
-      
-      if (result && result.uri) {
-        setModelDownloaded(true);
-        Alert.alert(t('tilawah.success'), t('tilawah.featureReady'));
-      }
-    } catch (error) {
-      Alert.alert(t('tilawah.error'), t('tilawah.downloadFailed'));
-      console.error('Download error:', error);
-    } finally {
-      setIsDownloading(false);
-      setDownloadProgress(0);
-    }
-  };
-
-  const deleteModel = async () => {
-    Alert.alert(
-      t('tilawah.deleteModel'),
-      t('tilawah.deleteConfirmation', { size: MODEL_SIZE_MB }),
-      [
-        { text: t('tilawah.cancel'), style: 'cancel' },
-        {
-          text: t('tilawah.delete'),
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await FileSystem.deleteAsync(modelPath);
-              setModelDownloaded(false);
-              if (whisperContext) {
-                await whisperContext.release();
-                setWhisperContext(null);
-              }
-              Alert.alert(t('tilawah.success'), t('tilawah.modelDeleted'));
-            } catch (error) {
-              Alert.alert(t('tilawah.error'), t('tilawah.deleteFailed'));
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  const initializeWhisper = async () => {
-    if (whisperContext) return;
-    if (!modelDownloaded) {
-      Alert.alert(t('tilawah.error'), t('tilawah.modelNotDownloaded'));
+  
+  const startMicTest = async () => {
+    if (sessionActiveRef.current || isRecording) {
+      Alert.alert(t('tilawah.micTestTitle'), t('tilawah.micTestStopSession'));
       return;
     }
 
-    setIsInitializing(true);
+    if (!hasMicPermission) {
+      await requestPermissions();
+      if (!hasMicPermission) return;
+    }
+
+    setLastHeard('');
+    setIsMicTestActive(true);
 
     try {
-      const context = await initWhisper({
-        filePath: modelPath,
+      ExpoSpeechRecognitionModule.start({
+        lang: SPEECH_LANG,
+        interimResults: true,
+        continuous: false,
+        maxAlternatives: 1,
+        iosTaskHint: 'confirmation',
+        androidIntentOptions: {
+          EXTRA_LANGUAGE_MODEL: 'web_search'
+        }
       });
-      
-      setWhisperContext(context);
     } catch (error) {
-      console.error('Error initializing Whisper:', error);
-      Alert.alert(
-        t('tilawah.initializationError'),
-        t('tilawah.initializationFailed'),
-        [
-          { text: t('tilawah.ok') },
-          { 
-            text: t('tilawah.deleteModel'), 
-            onPress: deleteModel,
-            style: 'destructive' 
-          }
-        ]
-      );
+      console.error('Mic test start error:', error);
+      setIsMicTestActive(false);
+      return;
+    }
+
+    if (micTestTimer.current) clearTimeout(micTestTimer.current);
+    micTestTimer.current = setTimeout(() => {
+      try {
+        ExpoSpeechRecognitionModule.stop();
+      } catch (error) {
+        console.error('Mic test stop error:', error);
+      } finally {
+        setIsMicTestActive(false);
+      }
+    }, RECOGNITION_TIMEOUT_MS);
+  };
+
+  const stopMicTest = async () => {
+    if (micTestTimer.current) clearTimeout(micTestTimer.current);
+    try {
+      await ExpoSpeechRecognitionModule.stop();
+    } catch (error) {
+      console.error('Mic test stop error:', error);
     } finally {
-      setIsInitializing(false);
+      setIsMicTestActive(false);
     }
   };
+  
+  // ========================================
+  // TTS & SPEECH RECOGNITION
+  // ========================================
 
-  const useSampleText = () => {
-    const sampleText = 'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ';
-    setInputText(sampleText);
-  };
+  const speakSentence = async () => {
+    if (!sessionActiveRef.current) return;
+    const sentence = wordsRef.current.map((word) => word.text).join(' ');
+    if (!sentence) return;
 
-  const startRecordingForWord = async () => {
     try {
-      await audioRecorder.record();
-      
-      recordingTimer.current = setTimeout(() => {
-        processCurrentWord();
-      }, RECORDING_INTERVAL);
+      await Tts.stop();
+      pendingSpeakTypeRef.current = 'sentence';
+      Tts.speak(sentence);
     } catch (error) {
-      console.error('Failed to start recording:', error);
-      Alert.alert(t('tilawah.error'), t('tilawah.recordingFailed'));
+      console.error('TTS error:', error);
+      startRecognitionForSentence();
     }
   };
 
-  const stopCurrentRecording = async (): Promise<string | null | any> => {
-    if (recordingTimer.current) {
-      clearTimeout(recordingTimer.current);
-    }
-
-    if (!audioRecorder.isRecording) return null;
-
-    try {
-      const uri = await audioRecorder.stop();
-      return uri;
-    } catch (error) {
-      console.error('Failed to stop recording:', error);
-      return null;
-    }
-  };
-
-  const transcribeAudio = async (audioUri: string): Promise<string> => {
-    if (!whisperContext) return '';
+  const startRecognitionForSentence = async () => {
+    if (!sessionActiveRef.current) return;
+    processingRef.current = false;
+    hasFinalResultRef.current = false;
+    lastTranscriptRef.current = '';
+    const contextualStrings = wordsRef.current.map((word) => word.text);
 
     try {
-      const { promise } = whisperContext.transcribe(audioUri, {
-        language: 'ar',
-        maxLen: 1,
-        tokenTimestamps: false,
-        speedUp: false,
+      ExpoSpeechRecognitionModule.start({
+        lang: SPEECH_LANG,
+        interimResults: true,
+        continuous: false,
+        maxAlternatives: 1,
+        iosTaskHint: 'confirmation',
+        contextualStrings,
+        androidIntentOptions: {
+          EXTRA_LANGUAGE_MODEL: 'web_search'
+        }
       });
-
-      const { result } = await promise;
-      return result.trim();
     } catch (error) {
-      console.error('Transcription error:', error);
-      return '';
+      console.error('Speech recognition start error:', error);
+      handleTranscript('');
+      return;
     }
+
+    if (recognitionTimer.current) clearTimeout(recognitionTimer.current);
+    recognitionTimer.current = setTimeout(() => {
+      try {
+        ExpoSpeechRecognitionModule.stop();
+      } catch (error) {
+        console.error('Speech recognition stop error:', error);
+      }
+    }, RECOGNITION_TIMEOUT_MS);
+  };
+
+  const handleTranscript = (transcript: string) => {
+    if (!sessionActiveRef.current) return;
+    if (processingRef.current) return;
+    processingRef.current = true;
+
+    if (recognitionTimer.current) {
+      clearTimeout(recognitionTimer.current);
+      recognitionTimer.current = null;
+    }
+
+    if (!transcript && retryCountRef.current < MAX_RECOGNITION_RETRIES) {
+      retryCountRef.current += 1;
+      processingRef.current = false;
+      setTimeout(() => startRecognitionForSentence(), 300);
+      return;
+    }
+
+    scoreTranscript(transcript);
+  };
+
+  const normalizeArabicText = (text: string): string => {
+    return text
+      .replace(/[\u064B-\u065F\u0670]/g, '') // Remove harakat
+      .replace(/\u0640/g, '') // Remove tatweel
+      .replace(/[إأآٱا]/g, 'ا') // Normalize alif
+      .replace(/[يىئ]/g, 'ي') // Normalize yaa
+      .replace(/ؤ/g, 'و')
+      .replace(/ئ/g, 'ي')
+      .replace(/ة/g, 'ه') // Normalize taa marbuta
+      .replace(/[^\u0600-\u06FF\s]/g, '') // Remove punctuation/latin
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
+  };
+
+  const tokenizeArabic = (text: string): string[] => {
+    return text
+      .split(/\s+/)
+      .map((token) => token.trim())
+      .filter(Boolean);
+  };
+
+  const buildVariants = (word: string): string[] => {
+    const variants = new Set<string>();
+    const base = normalizeArabicText(word);
+    if (!base) return [];
+    variants.add(base);
+
+    const prefixes = ['و', 'ف', 'ب', 'ك', 'ل', 'س'];
+    const maybeStripAl = (value: string) => {
+      if (value.startsWith('ال') && value.length > 2) {
+        variants.add(value.slice(2));
+      }
+    };
+
+    maybeStripAl(base);
+
+    prefixes.forEach((prefix) => {
+      if (base.startsWith(prefix) && base.length > 1) {
+        const withoutPrefix = base.slice(1);
+        variants.add(withoutPrefix);
+        maybeStripAl(withoutPrefix);
+      }
+      if (base.startsWith(prefix + 'ال') && base.length > 3) {
+        variants.add(base.slice(3));
+      }
+    });
+
+    return Array.from(variants);
+  };
+
+  const getSimilarityThreshold = (length: number): number => {
+    if (length <= 2) return 0.85;
+    if (length <= 4) return 0.75;
+    if (length <= 6) return 0.7;
+    return 0.65;
+  };
+
+  const scoreTranscript = (transcript: string) => {
+    const expectedWords = wordsRef.current;
+    const expectedTokens = expectedWords.map((word) => normalizeArabicText(word.text));
+    const spokenTokens = tokenizeArabic(normalizeArabicText(transcript));
+
+    const updatedWords: Word[] = expectedWords.map((word) => ({
+      ...word,
+      status: 'incorrect',
+      spokenText: ''
+    }));
+
+    if (!spokenTokens.length || !expectedTokens.length) {
+      finalizeScore(updatedWords);
+      return;
+    }
+
+    const n = expectedTokens.length;
+    const m = spokenTokens.length;
+    const dp: number[][] = Array.from({ length: n + 1 }, () => Array(m + 1).fill(0));
+
+    const matches = (i: number, j: number) => {
+      return checkWordMatch(spokenTokens[j], expectedWords[i].text);
+    };
+
+    for (let i = 1; i <= n; i++) {
+      for (let j = 1; j <= m; j++) {
+        if (matches(i - 1, j - 1)) {
+          dp[i][j] = dp[i - 1][j - 1] + 1;
+        } else {
+          dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+        }
+      }
+    }
+
+    const matchedSpoken = new Set<number>();
+    const expectedToSpoken: Array<number | null> = Array(n).fill(null);
+    let i = n;
+    let j = m;
+
+    while (i > 0 && j > 0) {
+      if (matches(i - 1, j - 1)) {
+        expectedToSpoken[i - 1] = j - 1;
+        matchedSpoken.add(j - 1);
+        i -= 1;
+        j -= 1;
+      } else if (dp[i - 1][j] >= dp[i][j - 1]) {
+        i -= 1;
+      } else {
+        j -= 1;
+      }
+    }
+
+    const unmatchedSpoken = spokenTokens
+      .map((token, index) => ({ token, index }))
+      .filter(({ index }) => !matchedSpoken.has(index));
+
+    for (let idx = 0; idx < n; idx++) {
+      const mappedSpokenIndex = expectedToSpoken[idx];
+      if (mappedSpokenIndex !== null) {
+        updatedWords[idx] = {
+          ...updatedWords[idx],
+          status: 'correct',
+          spokenText: spokenTokens[mappedSpokenIndex] ?? ''
+        };
+      } else if (unmatchedSpoken.length > 0) {
+        let bestToken = '';
+        let bestScore = 0;
+        for (const candidate of unmatchedSpoken) {
+          const score = calculateSimilarity(
+            normalizeArabicText(candidate.token),
+            normalizeArabicText(expectedWords[idx].text)
+          );
+          if (score > bestScore) {
+            bestScore = score;
+            bestToken = candidate.token;
+          }
+        }
+        updatedWords[idx] = {
+          ...updatedWords[idx],
+          status: bestScore >= getSimilarityThreshold(expectedTokens[idx].length) ? 'correct' : 'incorrect',
+          spokenText: bestToken
+        };
+      }
+    }
+
+    finalizeScore(updatedWords);
+  };
+
+  const finalizeScore = (updatedWords: Word[]) => {
+    const correct = updatedWords.filter((word) => word.status === 'correct').length;
+    setWords(updatedWords);
+    setScore({ correct, total: updatedWords.length });
+    setProgress(100);
+    setIsRecording(false);
+    setSessionComplete(true);
+    sessionActiveRef.current = false;
+  };
+
+  const calculateSimilarity = (str1: string, str2: string): number => {
+    const len1 = str1.length;
+    const len2 = str2.length;
+    
+    if (len1 === 0) return len2 === 0 ? 1 : 0;
+    if (len2 === 0) return 0;
+    
+    const matrix: number[][] = [];
+    
+    for (let i = 0; i <= len1; i++) matrix[i] = [i];
+    for (let j = 0; j <= len2; j++) matrix[0][j] = j;
+    
+    for (let i = 1; i <= len1; i++) {
+      for (let j = 1; j <= len2; j++) {
+        const cost = str1[i - 1] === str2[j - 1] ? 0 : 1;
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j - 1] + cost
+        );
+      }
+    }
+    
+    const distance = matrix[len1][len2];
+    const maxLen = Math.max(len1, len2);
+    
+    return 1 - (distance / maxLen);
   };
 
   const checkWordMatch = (spokenText: string, expectedWord: string): boolean => {
-    const normalized = spokenText.replace(/\s+/g, ' ').toLowerCase();
-    const expected = expectedWord.toLowerCase();
-    
-    return normalized.includes(expected) || 
-           expected.includes(normalized) ||
-           normalized === expected;
+    const normalizedSpoken = normalizeArabicText(spokenText);
+    const normalizedExpected = normalizeArabicText(expectedWord);
+
+    if (!normalizedExpected) return false;
+    if (!normalizedSpoken) return false;
+
+    const expectedVariants = buildVariants(normalizedExpected);
+    const spokenTokens = tokenizeArabic(normalizedSpoken);
+    const spokenVariants = spokenTokens.flatMap((token) => buildVariants(token));
+    const allSpokenCandidates = [normalizedSpoken, ...spokenVariants];
+
+    console.log('🔍 Matching:', {
+      spoken: normalizedSpoken,
+      expected: normalizedExpected,
+      tokens: spokenTokens
+    });
+
+    for (const expected of expectedVariants) {
+      for (const spoken of allSpokenCandidates) {
+        if (!spoken) continue;
+        if (spoken === expected) return true;
+        if (spoken.includes(expected) || expected.includes(spoken)) return true;
+      }
+    }
+
+    const threshold = getSimilarityThreshold(normalizedExpected.length);
+    let bestSimilarity = 0;
+
+    for (const expected of expectedVariants) {
+      for (const spoken of allSpokenCandidates) {
+        if (!spoken) continue;
+        const similarity = calculateSimilarity(spoken, expected);
+        bestSimilarity = Math.max(bestSimilarity, similarity);
+      }
+    }
+
+    console.log('📊 Similarity:', bestSimilarity, 'threshold:', threshold);
+    return bestSimilarity >= threshold;
   };
 
-  const processCurrentWord = async () => {
-    const audioUri = await stopCurrentRecording();
-    
-    if (!audioUri || currentWordIndex >= words.length) {
-      completeSession();
-      return;
-    }
-
-    const transcript = await transcribeAudio(audioUri);
-    const currentWord = words[currentWordIndex];
-    const isCorrect = checkWordMatch(transcript, currentWord.text);
-
-    const newWords = [...words];
-    newWords[currentWordIndex] = {
-      ...currentWord,
-      status: isCorrect ? 'correct' : 'incorrect',
-    };
-    setWords(newWords);
-
-    if (isCorrect) {
-      setScore(prev => ({ ...prev, correct: prev.correct + 1 }));
-    }
-
-    const nextIndex = currentWordIndex + 1;
-    setCurrentWordIndex(nextIndex);
-    setProgress(Math.round((nextIndex / words.length) * 100));
-
-    if (nextIndex < words.length) {
-      const updated = [...newWords];
-      updated[nextIndex] = { ...updated[nextIndex], status: 'current' };
-      setWords(updated);
-      await startRecordingForWord();
-    } else {
-      completeSession();
-    }
-  };
+  // ========================================
+  // SESSION MANAGEMENT
+  // ========================================
 
   const completeSession = async () => {
+    console.log('🏁 Complete!');
     setIsRecording(false);
     setSessionComplete(true);
-    
-    if (audioRecorder.isRecording) {
-      await stopCurrentRecording();
+    try {
+      await ExpoSpeechRecognitionModule.abort();
+      await Tts.stop();
+    } catch (error) {
+      console.log('Error finishing session:', error);
     }
   };
 
   const startSession = async () => {
     if (!inputText.trim()) {
-      Alert.alert(t('tilawah.error'), t('tilawah.enterTextFirst'));
+      Alert.alert(t('common.error'), t('tilawah.enterTextFirst'));
       return;
-    }
-
-    if (!whisperContext) {
-      await initializeWhisper();
-      if (!whisperContext) return;
     }
 
     const wordsArray = inputText.trim().split(/\s+/).map((text, index) => ({
       text,
-      status: (index === 0 ? 'current' : 'pending') as Word['status'],
+      status: 'pending' as Word['status'],
     }));
 
     setWords(wordsArray);
-    setCurrentWordIndex(0);
     setProgress(0);
     setSessionComplete(false);
     setScore({ correct: 0, total: wordsArray.length });
     setIsRecording(true);
+    sessionActiveRef.current = true;
+    retryCountRef.current = 0;
 
-    await startRecordingForWord();
+    setTimeout(() => speakSentence(), 600);
   };
 
   const stopSession = async () => {
-    if (recordingTimer.current) {
-      clearTimeout(recordingTimer.current);
+    sessionActiveRef.current = false;
+    if (recognitionTimer.current) clearTimeout(recognitionTimer.current);
+    try {
+      await ExpoSpeechRecognitionModule.abort();
+      await Tts.stop();
+    } catch (error) {
+      console.log('Error stopping session:', error);
     }
-
-    if (audioRecorder.isRecording) {
-      await audioRecorder.stop();
-    }
-
     setIsRecording(false);
   };
 
   const resetSession = () => {
     stopSession();
     setWords([]);
-    setCurrentWordIndex(0);
     setProgress(0);
     setSessionComplete(false);
     setScore({ correct: 0, total: 0 });
+  };
+
+  const useSampleText = () => {
+    setInputText('بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ');
   };
 
   const getScorePercentage = (): number => {
@@ -398,7 +648,33 @@ export default function TilawahScreen() {
     return Math.round((score.correct / score.total) * 100);
   };
 
-  if (checkingPermission || checkingModel) {
+  // ========================================
+  // RENDER
+  // ========================================
+
+  useEffect(() => {
+    const handleTtsStart = () => setIsSpeaking(true);
+    const handleTtsFinish = () => {
+      setIsSpeaking(false);
+      if (pendingSpeakTypeRef.current === 'sentence') {
+        pendingSpeakTypeRef.current = null;
+        startRecognitionForSentence();
+      }
+    };
+    const handleTtsCancel = () => setIsSpeaking(false);
+
+    Tts.addEventListener('tts-start', handleTtsStart);
+    Tts.addEventListener('tts-finish', handleTtsFinish);
+    Tts.addEventListener('tts-cancel', handleTtsCancel);
+
+    return () => {
+      Tts.removeEventListener('tts-start', handleTtsStart);
+      Tts.removeEventListener('tts-finish', handleTtsFinish);
+      Tts.removeEventListener('tts-cancel', handleTtsCancel);
+    };
+  }, []);
+
+  if (checkingPermission) {
     return (
       <View className="flex-1 bg-white dark:bg-gray-900 items-center justify-center">
         <ActivityIndicator size="large" color="#0d9488" />
@@ -410,38 +686,34 @@ export default function TilawahScreen() {
   if (!hasMicPermission) {
     return (
       <SafeAreaView className="flex-1 bg-teal-600 dark:bg-teal-700">
-        <View className="p-4 bg-teal-600 dark:bg-teal-700">
-          <Text className="text-2xl font-bold text-white">
-            {t('tilawah.title')}
-          </Text>
+        <View className="p-4">
+          <Text className="text-2xl font-bold text-white">{t('tilawah.title')}</Text>
         </View>
         
         <View className="flex-1 items-center justify-center px-4 bg-white dark:bg-gray-900">
-          <IconSymbol size={64} name="mic-off" color="#dc2626" />
+          <MicOff size={64} color="#dc2626" />
           <Text className="text-gray-900 dark:text-white text-center mt-4 text-xl font-bold">
             {t('tilawah.permissionRequired')}
           </Text>
           
-          <View className="w-full mt-6">
-            <View className="p-4 rounded-xl bg-red-50 dark:bg-red-950">
-              <View className="flex-row items-center mb-2">
-                <IconSymbol size={24} name="cancel" color="#dc2626" />
-                <Text className="ml-2 font-semibold text-red-700 dark:text-red-300">
-                  {t('tilawah.microphonePermission')}
-                </Text>
-              </View>
-              <Text className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                {t('tilawah.microphonePermissionDesc')}
+          <View className="w-full mt-6 p-4 rounded-xl bg-red-50 dark:bg-red-950">
+            <View className="flex-row items-center mb-2">
+              <X size={24} color="#dc2626" />
+              <Text className="ml-2 font-semibold text-red-700 dark:text-red-300">
+                {t('tilawah.microphonePermission')}
               </Text>
-              <TouchableOpacity
-                onPress={requestPermissions}
-                className="bg-red-600 py-2 px-4 rounded-lg"
-              >
-                <Text className="text-white font-semibold text-center">
-                  {t('tilawah.enableMicrophone')}
-                </Text>
-              </TouchableOpacity>
             </View>
+            <Text className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+              {t('tilawah.permissionRequiredDesc')}
+            </Text>
+            <TouchableOpacity
+              onPress={requestPermissions}
+              className="bg-red-600 py-2 px-4 rounded-lg"
+            >
+              <Text className="text-white font-semibold text-center">
+                {t('tilawah.enableMicrophone')}
+              </Text>
+            </TouchableOpacity>
           </View>
 
           <TouchableOpacity
@@ -457,109 +729,15 @@ export default function TilawahScreen() {
     );
   }
 
-  if (!modelDownloaded) {
-    return (
-      <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={["top"]}>
-        <ScrollView>
-          <View className="p-4">
-            <View className="items-center mb-8">
-              <View className="w-20 h-20 bg-teal-600 dark:bg-teal-700 rounded-full items-center justify-center mb-4 shadow-lg">
-                <IconSymbol size={40} name="mic" color="#FFFFFF" />
-              </View>
-              <Text className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                {t('tilawah.title')}
-              </Text>
-              <Text className="text-center text-gray-600 dark:text-gray-400">
-                {t('tilawah.description')}
-              </Text>
-            </View>
-
-            <LinearGradient
-              colors={colorScheme === 'dark' ? ['#115e59', '#134e4a'] : ['#0d9488', '#0f766e']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={{ borderRadius: 24, padding: 24, marginBottom: 24 }}
-            >
-              <View className="items-center">
-                <IconSymbol size={64} name="cloud-download" color="#FFFFFF" />
-                <Text className="text-white text-2xl font-bold mt-4 mb-2 text-center">
-                  {t('tilawah.downloadFeature')}
-                </Text>
-                <Text className="text-teal-50 text-center mb-4">
-                  {t('tilawah.featureRequirement')}
-                </Text>
-                <View className="bg-white/20 rounded-xl p-3 w-full">
-                  <Text className="text-white text-center font-semibold">
-                    {t('tilawah.size')}: {MODEL_SIZE_MB}MB
-                  </Text>
-                </View>
-              </View>
-            </LinearGradient>
-
-            {isDownloading ? (
-              <View className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-md border border-gray-100 dark:border-gray-700 mb-6">
-                <Text className="text-lg font-bold text-gray-900 dark:text-white mb-4 text-center">
-                  {t('tilawah.downloading')}
-                </Text>
-                <View className="h-3 bg-gray-200 dark:bg-gray-700 rounded-full mb-3 overflow-hidden">
-                  <View 
-                    className="h-full bg-teal-600 dark:bg-teal-500 rounded-full transition-all"
-                    style={{ width: `${downloadProgress}%` }}
-                  />
-                </View>
-                <Text className="text-center text-teal-600 dark:text-teal-500 font-bold text-lg">
-                  {downloadProgress}%
-                </Text>
-                <Text className="text-center text-gray-500 dark:text-gray-400 text-sm mt-2">
-                  {(MODEL_SIZE_MB * downloadProgress / 100).toFixed(1)}MB / {MODEL_SIZE_MB}MB
-                </Text>
-              </View>
-            ) : (
-              <TouchableOpacity
-                onPress={downloadModel}
-                className="bg-teal-600 dark:bg-teal-700 rounded-2xl py-5 shadow-lg mb-6"
-              >
-                <View className="flex-row items-center justify-center">
-                  <IconSymbol size={24} name="cloud-download" color="#FFFFFF" />
-                  <Text className="text-white font-bold text-lg ml-2">
-                    {t('tilawah.downloadButton')} ({MODEL_SIZE_MB}MB)
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            )}
-
-            <View className="bg-amber-50 dark:bg-amber-950 rounded-2xl p-6 border border-amber-500">
-              <View className="flex-row items-center mb-3">
-                <IconSymbol size={24} name="info" color="#F59E0B" />
-                <Text className="text-lg font-semibold text-gray-900 dark:text-white ml-2">
-                  {t('tilawah.note')}
-                </Text>
-              </View>
-              <Text className="text-gray-700 dark:text-gray-300 leading-6">
-                {t('tilawah.stableConnection')}{'\n'}
-                {t('tilawah.dataUsage')} {MODEL_SIZE_MB}MB {t('tilawah.dataLabel')}{'\n'}
-                {t('tilawah.downloadOnce')}{'\n'}
-                {t('tilawah.canDelete')}
-              </Text>
-            </View>
-          </View>
-        </ScrollView>
-      </SafeAreaView>
-    );
-  }
-
   return (
     <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={["top"]}>
       <ScrollView className='flex-1' contentContainerStyle={{padding: 16}}>
         <View className="items-center mb-8">
-          <View className="w-20 h-20 bg-teal-600 dark:bg-teal-700 rounded-full items-center justify-center mb-4 shadow-lg">
-            <IconSymbol size={40} name="mic" color="#FFFFFF" />
+          <View className="w-20 h-20 bg-teal-600 dark:bg-teal-700 rounded-full items-center justify-center mb-4">
+            <Mic size={40} color="#FFFFFF" />
           </View>
           <Text className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
             {t('tilawah.title')}
-          </Text>
-          <Text className="text-center text-gray-600 dark:text-gray-400">
-            {t('tilawah.description')}
           </Text>
         </View>
 
@@ -567,20 +745,50 @@ export default function TilawahScreen() {
           <View className="bg-blue-50 dark:bg-blue-950 rounded-2xl p-6 mb-6">
             <ActivityIndicator size="large" color="#0d9488" />
             <Text className="text-center text-gray-900 dark:text-white mt-4 font-semibold">
-              {t('tilawah.loadingModel')}
+              {t('tilawah.preparingSpeech')}
             </Text>
           </View>
         )}
 
-        <View className="bg-teal-600 dark:bg-teal-700 rounded-3xl p-6 mb-6 shadow-lg">
-          <Text className="text-white text-xl font-bold mb-3">
-            {t('tilawah.howToUse')}
-          </Text>
+        <View className="bg-teal-600 dark:bg-teal-700 rounded-3xl p-6 mb-6">
+          <Text className="text-white text-xl font-bold mb-3">{t('tilawah.howToUse')}</Text>
           <Text className="text-teal-50">
             {t('tilawah.step1')}{'\n'}
             {t('tilawah.step2')}{'\n'}
-            {t('tilawah.step3')}
+            {t('tilawah.step3')}{'\n'}
+            {t('tilawah.step4')}
           </Text>
+        </View>
+
+        <View className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700 mb-6">
+          <Text className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+            {t('tilawah.micTestTitle')}
+          </Text>
+          <Text className="text-gray-600 dark:text-gray-400 mb-3">
+            {t('tilawah.micTestDesc')}
+          </Text>
+          <View className="flex-row gap-3 mb-4">
+            {!isMicTestActive ? (
+              <TouchableOpacity
+                onPress={startMicTest}
+                className="flex-1 bg-teal-600 dark:bg-teal-700 rounded-xl py-3"
+              >
+                <Text className="text-white font-semibold text-center">{t('tilawah.micTestStart')}</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                onPress={stopMicTest}
+                className="flex-1 bg-red-600 rounded-xl py-3"
+              >
+                <Text className="text-white font-semibold text-center">{t('tilawah.micTestStop')}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          <View className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+            <Text className="text-gray-900 dark:text-white text-base">
+              {lastHeard ? lastHeard : t('tilawah.micTestEmpty')}
+            </Text>
+          </View>
         </View>
 
         <View className="mb-6">
@@ -588,11 +796,6 @@ export default function TilawahScreen() {
             <Text className="text-lg font-bold text-gray-900 dark:text-white">
               {t('tilawah.quranText')}
             </Text>
-            <TouchableOpacity onPress={deleteModel}>
-              <Text className="text-red-600 dark:text-red-500 text-sm">
-                {t('tilawah.deleteModel')}
-              </Text>
-            </TouchableOpacity>
           </View>
           <View className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-200 dark:border-gray-700 mb-3">
             <TextInput
@@ -605,12 +808,8 @@ export default function TilawahScreen() {
               editable={!isRecording}
             />
           </View>
-          <TouchableOpacity
-            onPress={useSampleText}
-            className="self-end"
-            disabled={isRecording}
-          >
-            <Text className={`text-teal-600 dark:text-teal-500 font-semibold ${isRecording ? 'opacity-50' : ''}`}>
+          <TouchableOpacity onPress={useSampleText} disabled={isRecording}>
+            <Text className={`text-teal-600 dark:text-teal-500 font-semibold text-right ${isRecording ? 'opacity-50' : ''}`}>
               {t('tilawah.useSample')}
             </Text>
           </TouchableOpacity>
@@ -637,27 +836,27 @@ export default function TilawahScreen() {
             <View className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700">
               <View className="flex-row flex-wrap gap-2 justify-end">
                 {words.map((word, index) => (
-                  <View
-                    key={index}
-                    className={`px-4 py-2 rounded-xl ${
-                      word.status === 'correct'
-                        ? 'bg-green-600 dark:bg-green-700'
-                        : word.status === 'incorrect'
-                        ? 'bg-red-600 dark:bg-red-700'
-                        : word.status === 'current'
-                        ? 'bg-amber-500 dark:bg-amber-600'
-                        : 'bg-gray-100 dark:bg-gray-700'
-                    }`}
-                  >
-                    <Text
-                      className={`text-lg font-bold ${
-                        word.status !== 'pending'
-                          ? 'text-white'
-                          : 'text-gray-900 dark:text-white'
+                  <View key={index}>
+                    <View
+                      className={`px-4 py-2 rounded-xl ${
+                        word.status === 'correct'
+                          ? 'bg-green-600'
+                          : word.status === 'incorrect'
+                          ? 'bg-red-600'
+                          : word.status === 'current'
+                          ? 'bg-amber-500'
+                          : 'bg-gray-100 dark:bg-gray-700'
                       }`}
                     >
-                      {word.text}
-                    </Text>
+                      <Text className={`text-lg font-bold ${word.status !== 'pending' ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
+                        {word.text}
+                      </Text>
+                    </View>
+                    {word.spokenText && word.status === 'incorrect' && (
+                      <Text className="text-xs text-red-600 text-center mt-1">
+                        Said: {word.spokenText}
+                      </Text>
+                    )}
                   </View>
                 ))}
               </View>
@@ -674,7 +873,7 @@ export default function TilawahScreen() {
               style={{ borderRadius: 24, padding: 24 }}
             >
               <View className="items-center">
-                <IconSymbol size={64} name="check-circle" color="#FFFFFF" />
+                <CircleCheck size={64} color="#FFFFFF" />
                 <Text className="text-white text-2xl font-bold mt-4">
                   {t('tilawah.sessionComplete')}
                 </Text>
@@ -688,6 +887,22 @@ export default function TilawahScreen() {
                   <Text className="text-teal-50 text-center mt-2">
                     {t('tilawah.correctWords', { correct: score.correct, total: score.total })}
                   </Text>
+                  
+                  {getScorePercentage() === 100 && (
+                    <Text className="text-white text-center mt-4 text-xl">
+                      {t('tilawah.perfect')}
+                    </Text>
+                  )}
+                  {getScorePercentage() >= 80 && getScorePercentage() < 100 && (
+                    <Text className="text-white text-center mt-4">
+                      {t('tilawah.excellent')}
+                    </Text>
+                  )}
+                  {getScorePercentage() < 80 && (
+                    <Text className="text-white text-center mt-4">
+                      {t('tilawah.keepPracticing')}
+                    </Text>
+                  )}
                 </View>
               </View>
             </LinearGradient>
@@ -701,18 +916,24 @@ export default function TilawahScreen() {
             </Text>
             <View className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700">
               <View className="flex-row items-center mb-3">
-                <View className={`w-3 h-3 rounded-full mr-3 ${isRecording ? 'bg-red-500 animate-pulse' : 'bg-gray-400'}`} />
+                <View className={`w-3 h-3 rounded-full mr-3 ${isRecording ? 'bg-red-500' : 'bg-gray-400'}`} />
                 <Text className="text-gray-900 dark:text-white font-semibold">
-                  {isRecording ? t('tilawah.listening') : t('tilawah.ready')}
+                  {isRecording
+                    ? isSpeaking
+                      ? `🔊 ${t('tilawah.speaking')}`
+                      : isListening
+                        ? `🎤 ${t('tilawah.listening')}`
+                        : `⏳ ${t('tilawah.preparing')}`
+                    : `⏸️ ${t('tilawah.ready')}`}
                 </Text>
               </View>
-              {isRecording && currentWordIndex < words.length && (
+              {isRecording && (
                 <View className="mt-3 bg-amber-50 dark:bg-amber-950 rounded-xl p-4">
                   <Text className="text-amber-900 dark:text-amber-100 font-semibold mb-2">
-                    {t('tilawah.currentWord', { current: currentWordIndex + 1, total: words.length })}
+                    {t('tilawah.reciteSentenceTitle')}
                   </Text>
-                  <Text className="text-3xl font-bold text-amber-600 dark:text-amber-400 text-right">
-                    {words[currentWordIndex].text}
+                  <Text className="text-amber-700 dark:text-amber-300 text-sm mt-1 text-center">
+                    {t('tilawah.reciteSentenceDesc')}
                   </Text>
                 </View>
               )}
@@ -726,38 +947,30 @@ export default function TilawahScreen() {
               <TouchableOpacity
                 onPress={startSession}
                 disabled={!inputText.trim() || isInitializing}
-                className={`flex-1 rounded-2xl py-4 shadow-lg ${
+                className={`flex-1 rounded-2xl py-4 ${
                   inputText.trim() && !isInitializing
                     ? 'bg-teal-600 dark:bg-teal-700'
                     : 'bg-gray-300 dark:bg-gray-700'
                 }`}
               >
                 <View className="flex-row items-center justify-center">
-                  <IconSymbol size={24} name="play-arrow" color="#FFFFFF" />
+                  <Play size={24} color="#FFFFFF" />
                   <Text className="text-white font-bold text-lg ml-2">
-                    {t('tilawah.start')}
+                    {sessionComplete ? t('tilawah.startAgain') : t('tilawah.start')}
                   </Text>
                 </View>
               </TouchableOpacity>
               {words.length > 0 && (
-                <TouchableOpacity
-                  onPress={resetSession}
-                  className="bg-gray-600 dark:bg-gray-700 rounded-2xl py-4 px-6 shadow-lg"
-                >
-                  <IconSymbol size={24} name="refresh" color="#FFFFFF" />
+                <TouchableOpacity onPress={resetSession} className="bg-gray-600 rounded-2xl py-4 px-6">
+                  <RefreshCw size={24} color="#FFFFFF" />
                 </TouchableOpacity>
               )}
             </>
           ) : (
-            <TouchableOpacity
-              onPress={stopSession}
-              className="flex-1 bg-red-600 dark:bg-red-700 rounded-2xl py-4 shadow-lg"
-            >
+            <TouchableOpacity onPress={stopSession} className="flex-1 bg-red-600 rounded-2xl py-4">
               <View className="flex-row items-center justify-center">
-                <IconSymbol size={24} name="stop" color="#FFFFFF" />
-                <Text className="text-white font-bold text-lg ml-2">
-                  {t('tilawah.stop')}
-                </Text>
+                <Square size={24} color="#FFFFFF" />
+                <Text className="text-white font-bold text-lg ml-2">{t('tilawah.stop')}</Text>
               </View>
             </TouchableOpacity>
           )}
@@ -770,7 +983,7 @@ export default function TilawahScreen() {
           style={{ borderRadius: 16, padding: 24 }}
         >
           <View className="flex-row items-center mb-3">
-            <IconSymbol size={24} name="info" color="#059669" />
+            <Info size={24} color="#059669" />
             <Text className="text-lg font-semibold text-gray-900 dark:text-white ml-2">
               {t('tilawah.tips')}
             </Text>
