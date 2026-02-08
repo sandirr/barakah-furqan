@@ -11,6 +11,8 @@ export interface PrayerTime {
 export interface PrayerTimes {
   date: string;
   hijriDate: string;
+  hijriMonthName?: string;
+  hijriDay?: number;
   fajr: string;
   sunrise: string;
   dhuhr: string;
@@ -112,9 +114,14 @@ class PrayerTimesService {
       const response = await this.fetchPrayerTimes(latitude, longitude);
       const data = response.data;
 
+      const hijriDay = Number(data.date.hijri.date?.split('-')[0]);
+      const hijriMonthName = data.date.hijri.month.en;
+
       const prayerTimes: PrayerTimes = {
         date: today,
         hijriDate: `${data.date.hijri.date?.substring(0,2)} ${data.date.hijri.month.en} ${data.date.hijri.year} (${data.date.readable})`,
+        hijriMonthName,
+        hijriDay: Number.isFinite(hijriDay) ? hijriDay : undefined,
         fajr: this.formatTime(data.timings.Fajr),
         sunrise: this.formatTime(data.timings.Sunrise),
         dhuhr: this.formatTime(data.timings.Dhuhr),
@@ -221,6 +228,24 @@ class PrayerTimesService {
       time: fajr.time,
       timeUntil: i18n.t('time.tomorrow'),
     };
+  }
+
+  isRamadanWindow(times: PrayerTimes): boolean {
+    const monthName = (times.hijriMonthName || '').toLowerCase().replace(/[^a-z]/g, '');
+    const day = times.hijriDay ?? NaN;
+
+    const isRamadan = monthName.includes('ramadan') || monthName.includes('ramadhan');
+    const isShaban = monthName.includes('shaban') || monthName.includes('saban');
+    const isShawwal = monthName.includes('shawwal') || monthName.includes('syawal');
+
+    if (isRamadan) return true;
+    if (isShaban && Number.isFinite(day)) {
+      return day >= 29;
+    }
+    if (isShawwal && Number.isFinite(day)) {
+      return day <= 1;
+    }
+    return false;
   }
 
   private async cachePrayerTimes(times: PrayerTimes): Promise<void> {

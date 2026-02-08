@@ -45,8 +45,17 @@ export default function ShalatScreen() {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [notificationEnabled, setNotificationEnabled] = useState(true);
   const [adhanEnabled, setAdhanEnabled] = useState(true);
+  const [prayerNotificationSettings, setPrayerNotificationSettings] = useState<Record<string, boolean>>({
+    fajr: true,
+    dhuhr: true,
+    asr: true,
+    maghrib: true,
+    isha: true,
+  });
+  const [sahurEnabled, setSahurEnabled] = useState(true);
+  const [sahurOffsetMinutes, setSahurOffsetMinutes] = useState(60);
+  const [isRamadanWindow, setIsRamadanWindow] = useState(false);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationName, setLocationName] = useState<string>('');
   const [scheduledCount, setScheduledCount] = useState(0);
@@ -70,15 +79,15 @@ export default function ShalatScreen() {
 
   useEffect(() => {
     const receivedSubscription = Notifications.addNotificationReceivedListener((notification) => {
-      const data = notification.request.content.data as { identifier?: string };
-      if (data?.identifier) {
+      const data = notification.request.content.data as { identifier?: string; type?: string };
+      if (data?.type === 'prayer') {
         notificationService.playAdhan();
       }
     });
 
     const responseSubscription = Notifications.addNotificationResponseReceivedListener((response) => {
-      const data = response.notification.request.content.data as { identifier?: string };
-      if (data?.identifier) {
+      const data = response.notification.request.content.data as { identifier?: string; type?: string };
+      if (data?.type === 'prayer') {
         notificationService.playAdhan();
       }
     });
@@ -90,10 +99,10 @@ export default function ShalatScreen() {
   }, []);
 
   useEffect(() => {
-    if (notificationEnabled && prayerTimes) {
-      checkScheduledNotifications();
+    if (prayerTimes) {
+      setIsRamadanWindow(prayerTimesService.isRamadanWindow(prayerTimes));
     }
-  }, [notificationEnabled, prayerTimes]);
+  }, [prayerTimes]);
 
   const initializeScreen = async () => {
     await loadCacheFirst();
@@ -145,10 +154,14 @@ export default function ShalatScreen() {
 
   const loadSettings = async () => {
     try {
-      const notifEnabled = await notificationService.isNotificationEnabled();
       const azanEnabled = await notificationService.isAdhanEnabled();
-      setNotificationEnabled(notifEnabled);
       setAdhanEnabled(azanEnabled);
+      const prayerSettings = await notificationService.getPrayerNotificationSettings();
+      setPrayerNotificationSettings(prayerSettings);
+      const sahurToggle = await notificationService.isSahurNotificationEnabled();
+      const sahurOffset = await notificationService.getSahurOffsetMinutes();
+      setSahurEnabled(sahurToggle);
+      setSahurOffsetMinutes(sahurOffset);
     } catch (err) {
       console.error('Load settings error:', err);
     }
@@ -209,10 +222,12 @@ export default function ShalatScreen() {
 
       tryReverseGeocode(userLocation).catch(() => {});
 
-      if (notificationEnabled) {
-        await notificationService.scheduleAllPrayerNotifications(times);
-        await checkScheduledNotifications();
-      }
+      await notificationService.scheduleAllPrayerNotifications(times, {
+        includeSahur: sahurEnabled,
+        sahurOffsetMinutes,
+        isRamadanWindow: prayerTimesService.isRamadanWindow(times),
+      });
+      await checkScheduledNotifications();
 
     } catch (err: any) {
       console.error('Load error:', err);
@@ -290,10 +305,12 @@ export default function ShalatScreen() {
       await updateNextPrayer(times);
       setIsUsingCache(false);
 
-      if (notificationEnabled) {
-        await notificationService.scheduleAllPrayerNotifications(times);
-        await checkScheduledNotifications();
-      }
+      await notificationService.scheduleAllPrayerNotifications(times, {
+        includeSahur: sahurEnabled,
+        sahurOffsetMinutes,
+        isRamadanWindow: prayerTimesService.isRamadanWindow(times),
+      });
+      await checkScheduledNotifications();
 
     } catch (err: any) {
       console.error('Refresh error:', err);
@@ -303,20 +320,53 @@ export default function ShalatScreen() {
     }
   };
 
-  const toggleNotification = async (value: boolean) => {
+  const togglePrayerNotification = async (id: string, value: boolean) => {
     try {
-      setNotificationEnabled(value);
-      await notificationService.setNotificationEnabled(value);
-      
-      if (value && prayerTimes) {
-        await notificationService.scheduleAllPrayerNotifications(prayerTimes);
+      setPrayerNotificationSettings((prev) => ({ ...prev, [id]: value }));
+      await notificationService.setPrayerNotificationEnabled(id, value);
+
+      if (prayerTimes) {
+        if (value) {
+          await notificationService.scheduleSinglePrayerNotification(prayerTimes, id);
+        } else {
+          await notificationService.cancelPrayerNotification(id);
+        }
         await checkScheduledNotifications();
-      } else {
-        await notificationService.cancelAllNotifications();
-        setScheduledCount(0);
       }
     } catch (err) {
-      console.error('Toggle notification error:', err);
+      console.error('Toggle prayer notification error:', err);
+    }
+  };
+
+  const toggleSahurNotification = async (value: boolean) => {
+    try {
+      setSahurEnabled(value);
+      await notificationService.setSahurNotificationEnabled(value);
+
+      if (prayerTimes && isRamadanWindow && value) {
+          await notificationService.scheduleSahurNotification(prayerTimes, sahurOffsetMinutes);
+      }
+      if (!value) {
+        await notificationService.cancelSahurNotification();
+      }
+      await checkScheduledNotifications();
+    } catch (err) {
+      console.error('Toggle sahur notification error:', err);
+    }
+  };
+
+  const adjustSahurOffset = async (deltaMinutes: number) => {
+    if (!prayerTimes) return;
+    const [fajrHour, fajrMinute] = prayerTimes.fajr.split(':').map(Number);
+    const fajrTotal = fajrHour * 60 + fajrMinute;
+    const nextOffset = Math.max(0, Math.min(fajrTotal, sahurOffsetMinutes + deltaMinutes));
+
+    setSahurOffsetMinutes(nextOffset);
+    await notificationService.setSahurOffsetMinutes(nextOffset);
+
+    if (sahurEnabled && isRamadanWindow) {
+      await notificationService.scheduleSahurNotification(prayerTimes, nextOffset);
+      await checkScheduledNotifications();
     }
   };
 
@@ -366,6 +416,19 @@ export default function ShalatScreen() {
 
     return icons[name] || Clock;
   };
+
+  const sahurTime = prayerTimes
+    ? notificationService.getSahurTime(prayerTimes, sahurOffsetMinutes)
+    : null;
+  const sahurOffsetDisplay = prayerTimes
+    ? (() => {
+        const [fajrHour, fajrMinute] = prayerTimes.fajr.split(':').map(Number);
+        const fajrTotal = fajrHour * 60 + fajrMinute;
+        return Math.min(sahurOffsetMinutes, fajrTotal);
+      })()
+    : sahurOffsetMinutes;
+  const hasAnyPrayerNotifications = Object.values(prayerNotificationSettings).some(Boolean);
+  const hasAnyNotifications = hasAnyPrayerNotifications || (isRamadanWindow && sahurEnabled);
 
   if (checkingRequirements) {
     return (
@@ -553,14 +616,18 @@ export default function ShalatScreen() {
         )}
 
         <View className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 mb-4">
-          <View className="p-4 border-b border-gray-100 dark:border-gray-700">
+          <View className="p-4 border-b border-gray-100 dark:border-gray-700 flex-row items-center justify-between">
             <Text className="text-lg font-bold text-gray-900 dark:text-white">
               {t('shalat.todaySchedule')}
+            </Text>
+            <Text className="text-base text-gray-900 dark:text-white">
+              {t('shalat.notification')}
             </Text>
           </View>
           
           {prayerTimes && prayerTimesService.getPrayerList(prayerTimes).map((prayer, index) => {
             const PrayerIcon = getPrayerIcon(prayer.name);
+            const prayerKey = prayer.name.toLowerCase();
 
             return (
               <View
@@ -574,16 +641,43 @@ export default function ShalatScreen() {
                 </View>
                 <View className="flex-1">
                   <Text className="text-lg font-bold text-gray-900 dark:text-white">
-                    {t(`shalat.${prayer.name.toLowerCase()}`)}
+                    {t(`shalat.${prayerKey}`)}
                   </Text>
                   <Text className="text-sm text-gray-500 dark:text-gray-400">{prayer.arabic}</Text>
                 </View>
-                <Text className="text-xl font-bold text-gray-900 dark:text-white">
-                  {prayer.time}
-                </Text>
+                <View className="items-end">
+                  <Text className="text-xl font-bold text-gray-900 dark:text-white mb-1">
+                    {prayer.time}
+                  </Text>
+                  <Switch
+                    value={prayerNotificationSettings[prayerKey]}
+                    onValueChange={(value) => togglePrayerNotification(prayerKey, value)}
+                    trackColor={{ false: '#d1d5db', true: '#86efac' }}
+                    thumbColor={prayerNotificationSettings[prayerKey] ? '#16a34a' : '#f3f4f6'}
+                  />
+                </View>
               </View>
             );
           })}
+
+          {isRamadanWindow && sahurTime && (
+            <View className="flex-row items-center p-4 border-t border-gray-100 dark:border-gray-700">
+              <View className="w-12 h-12 bg-amber-100 dark:bg-amber-900 rounded-xl items-center justify-center mr-4">
+                <Moon size={24} color="#d97706" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-lg font-bold text-gray-900 dark:text-white">
+                  {t('shalat.sahur')}
+                </Text>
+                <Text className="text-sm text-gray-500 dark:text-gray-400">
+                  {t('shalat.sahurDesc')}
+                </Text>
+              </View>
+              <Text className="text-xl font-bold text-gray-900 dark:text-white">
+                {sahurTime}
+              </Text>
+            </View>
+          )}
         </View>
 
         {location && (
@@ -633,27 +727,56 @@ export default function ShalatScreen() {
             </Text>
           </View>
 
-          <View className="flex-row items-center justify-between p-4 border-b border-gray-100 dark:border-gray-700">
-            <View className="flex-1 mr-4">
-              <Text className="text-base font-semibold text-gray-900 dark:text-white mb-1">
-                {t('shalat.notification')}
+          {isRamadanWindow && sahurTime && (
+            <View className="p-4 border-b border-gray-100 dark:border-gray-700">
+              <View className="flex-row items-center justify-between">
+                <View className="flex-1 mr-4">
+                  <Text className="text-base font-semibold text-gray-900 dark:text-white mb-1">
+                    {t('shalat.sahur')}
+                  </Text>
+                  <Text className="text-sm text-gray-500 dark:text-gray-400">
+                    {t('shalat.sahurReminder')}
+                  </Text>
+                </View>
+                <Switch
+                  value={sahurEnabled}
+                  onValueChange={toggleSahurNotification}
+                  trackColor={{ false: '#d1d5db', true: '#86efac' }}
+                  thumbColor={sahurEnabled ? '#16a34a' : '#f3f4f6'}
+                />
+              </View>
+
+              <View className="flex-row items-center justify-between mt-3">
+                <View className="flex-1 mr-4">
+                  <Text className="text-sm text-gray-500 dark:text-gray-400">
+                    {t('shalat.sahurTimeLabel')}
+                  </Text>
+                  <Text className="text-base font-semibold text-gray-900 dark:text-white">
+                    {sahurTime} • {t('shalat.sahurBeforeFajr', { minutes: sahurOffsetDisplay })}
+                  </Text>
+                </View>
+                <View className="flex-row items-center">
+                  <TouchableOpacity
+                    onPress={() => adjustSahurOffset(-15)}
+                    className="w-9 h-9 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700 mr-2"
+                    activeOpacity={0.7}
+                  >
+                    <Text className="text-lg font-bold text-gray-700 dark:text-gray-200">-</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => adjustSahurOffset(15)}
+                    className="w-9 h-9 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700"
+                    activeOpacity={0.7}
+                  >
+                    <Text className="text-lg font-bold text-gray-700 dark:text-gray-200">+</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+              <Text className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                {t('shalat.sahurLimit')}
               </Text>
-              <Text className="text-sm text-gray-500 dark:text-gray-400">
-                {t('shalat.notificationDesc')}
-              </Text>
-              {notificationEnabled && scheduledCount > 0 && (
-                <Text className="text-xs text-green-600 dark:text-green-400 mt-1">
-                  ✓ {scheduledCount} {t('shalat.scheduledNotifications')}
-                </Text>
-              )}
             </View>
-            <Switch
-              value={notificationEnabled}
-              onValueChange={toggleNotification}
-              trackColor={{ false: '#d1d5db', true: '#86efac' }}
-              thumbColor={notificationEnabled ? '#16a34a' : '#f3f4f6'}
-            />
-          </View>
+          )}
 
           <View className="flex-row items-center justify-between p-4">
             <View className="flex-1 mr-4">
@@ -685,7 +808,7 @@ export default function ShalatScreen() {
           </TouchableOpacity>
         )}
 
-        {notificationEnabled && __DEV__ && (
+        {hasAnyNotifications && __DEV__ && (
           <TouchableOpacity
             onPress={testNotification}
             className="bg-blue-100 dark:bg-blue-900 rounded-2xl p-4 flex-row items-center justify-center"

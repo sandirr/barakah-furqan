@@ -1,3 +1,4 @@
+import i18n from '@/i18n';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Audio } from 'expo-av';
 import * as Notifications from 'expo-notifications';
@@ -5,6 +6,17 @@ import { PrayerTimes } from './prayer-times.service';
 
 const NOTIFICATION_ENABLED_KEY = '@notification_enabled';
 const ADHAN_ENABLED_KEY = '@adhan_enabled';
+const PRAYER_NOTIFICATION_SETTINGS_KEY = '@prayer_notification_settings';
+const SAHUR_NOTIFICATION_ENABLED_KEY = '@sahur_notification_enabled';
+const SAHUR_OFFSET_MINUTES_KEY = '@sahur_offset_minutes';
+
+const DEFAULT_PRAYER_SETTINGS: Record<string, boolean> = {
+  fajr: true,
+  dhuhr: true,
+  asr: true,
+  maghrib: true,
+  isha: true,
+};
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -31,38 +43,49 @@ class NotificationService {
     return finalStatus === 'granted';
   }
 
-  async scheduleAllPrayerNotifications(prayerTimes: PrayerTimes): Promise<void> {
+  async scheduleAllPrayerNotifications(
+    prayerTimes: PrayerTimes,
+    options?: { includeSahur?: boolean; sahurOffsetMinutes?: number; isRamadanWindow?: boolean }
+  ): Promise<void> {
     await this.cancelAllNotifications();
 
-    const isEnabled = await this.isNotificationEnabled();
-    if (!isEnabled) return;
-
+    const settings = await this.getPrayerNotificationSettings();
     const prayers = [
-      { name: 'Subuh', time: prayerTimes.fajr, id: 'fajr' },
-      { name: 'Dzuhur', time: prayerTimes.dhuhr, id: 'dhuhr' },
-      { name: 'Ashar', time: prayerTimes.asr, id: 'asr' },
-      { name: 'Maghrib', time: prayerTimes.maghrib, id: 'maghrib' },
-      { name: 'Isya', time: prayerTimes.isha, id: 'isha' },
+      { key: 'fajr', time: prayerTimes.fajr, id: 'fajr' },
+      { key: 'dhuhr', time: prayerTimes.dhuhr, id: 'dhuhr' },
+      { key: 'asr', time: prayerTimes.asr, id: 'asr' },
+      { key: 'maghrib', time: prayerTimes.maghrib, id: 'maghrib' },
+      { key: 'isha', time: prayerTimes.isha, id: 'isha' },
     ];
 
     for (const prayer of prayers) {
-      await this.schedulePrayerNotification(prayer.name, prayer.time, prayer.id);
+      if (settings[prayer.id]) {
+        await this.schedulePrayerNotification(prayer.key, prayer.time, prayer.id);
+      }
+    }
+
+    if (options?.includeSahur && options.isRamadanWindow) {
+      await this.scheduleSahurNotification(
+        prayerTimes,
+        options.sahurOffsetMinutes ?? 60
+      );
     }
   }
 
   private async schedulePrayerNotification(
-    prayerName: string,
+    prayerKey: string,
     prayerTime: string,
     identifier: string
   ): Promise<void> {
+    const prayerName = i18n.t(`shalat.${prayerKey}`);
     try {
       const [hours, minutes] = prayerTime.split(':').map(Number);
 
       const notificationId = await Notifications.scheduleNotificationAsync({
         content: {
-          title: `Waktu ${prayerName}`,
-          body: `Saatnya menunaikan shalat ${prayerName}`,
-          data: { prayerName, identifier },
+          title: i18n.t('shalat.notificationTitle', { prayer: prayerName }),
+          body: i18n.t('shalat.notificationBody', { prayer: prayerName }),
+          data: { prayerName, identifier: `prayer_${identifier}`, type: 'prayer' },
           sound: 'adzan.mp3',
         },
         trigger: {
@@ -70,13 +93,80 @@ class NotificationService {
           hour: hours,
           minute: minutes,
         },
-        identifier,
+        identifier: `prayer_${identifier}`,
       });
 
       // console.log(`Scheduled ${prayerName} notification at ${prayerTime} with ID: ${notificationId}`);
     } catch (error) {
       console.error(`Failed to schedule ${prayerName} notification:`, error);
     }
+  }
+
+  async scheduleSinglePrayerNotification(prayerTimes: PrayerTimes, id: string): Promise<void> {
+    const map: Record<string, { key: string; time: string }> = {
+      fajr: { key: 'fajr', time: prayerTimes.fajr },
+      dhuhr: { key: 'dhuhr', time: prayerTimes.dhuhr },
+      asr: { key: 'asr', time: prayerTimes.asr },
+      maghrib: { key: 'maghrib', time: prayerTimes.maghrib },
+      isha: { key: 'isha', time: prayerTimes.isha },
+    };
+
+    const prayer = map[id];
+    if (!prayer) return;
+    await this.schedulePrayerNotification(prayer.key, prayer.time, id);
+  }
+
+  async cancelPrayerNotification(id: string): Promise<void> {
+    try {
+      await Notifications.cancelScheduledNotificationAsync(`prayer_${id}`);
+    } catch (error) {
+      // Ignore if not found
+    }
+  }
+
+  async scheduleSahurNotification(prayerTimes: PrayerTimes, offsetMinutes: number): Promise<void> {
+    try {
+      const sahurTime = this.getSahurTime(prayerTimes, offsetMinutes);
+      if (!sahurTime) return;
+
+      const [hours, minutes] = sahurTime.split(':').map(Number);
+
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: i18n.t('shalat.sahurNotificationTitle'),
+          body: i18n.t('shalat.sahurNotificationBody'),
+          data: { identifier: 'sahur', type: 'sahur' },
+          sound: 'default',
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DAILY,
+          hour: hours,
+          minute: minutes,
+        },
+        identifier: 'sahur',
+      });
+    } catch (error) {
+      console.error('Failed to schedule sahur notification:', error);
+    }
+  }
+
+  async cancelSahurNotification(): Promise<void> {
+    try {
+      await Notifications.cancelScheduledNotificationAsync('sahur');
+    } catch (error) {
+      // Ignore if not found
+    }
+  }
+
+  getSahurTime(prayerTimes: PrayerTimes, offsetMinutes: number): string | null {
+    const [fajrHour, fajrMinute] = prayerTimes.fajr.split(':').map(Number);
+    const fajrTotal = fajrHour * 60 + fajrMinute;
+    const clampedOffset = Math.min(Math.max(offsetMinutes, 0), fajrTotal);
+    const sahurTotal = Math.max(fajrTotal - clampedOffset, 0);
+    const hours = Math.floor(sahurTotal / 60);
+    const minutes = sahurTotal % 60;
+
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
   }
 
   async testNotification(): Promise<void> {
@@ -163,6 +253,50 @@ class NotificationService {
     } catch {
       return true;
     }
+  }
+
+  async getPrayerNotificationSettings(): Promise<Record<string, boolean>> {
+    try {
+      const value = await AsyncStorage.getItem(PRAYER_NOTIFICATION_SETTINGS_KEY);
+      if (!value) return { ...DEFAULT_PRAYER_SETTINGS };
+      const parsed = JSON.parse(value);
+      return { ...DEFAULT_PRAYER_SETTINGS, ...parsed };
+    } catch {
+      return { ...DEFAULT_PRAYER_SETTINGS };
+    }
+  }
+
+  async setPrayerNotificationEnabled(prayerId: string, enabled: boolean): Promise<void> {
+    const settings = await this.getPrayerNotificationSettings();
+    settings[prayerId] = enabled;
+    await AsyncStorage.setItem(PRAYER_NOTIFICATION_SETTINGS_KEY, JSON.stringify(settings));
+  }
+
+  async isSahurNotificationEnabled(): Promise<boolean> {
+    try {
+      const value = await AsyncStorage.getItem(SAHUR_NOTIFICATION_ENABLED_KEY);
+      return value ? JSON.parse(value) : true;
+    } catch {
+      return true;
+    }
+  }
+
+  async setSahurNotificationEnabled(enabled: boolean): Promise<void> {
+    await AsyncStorage.setItem(SAHUR_NOTIFICATION_ENABLED_KEY, JSON.stringify(enabled));
+  }
+
+  async getSahurOffsetMinutes(): Promise<number> {
+    try {
+      const value = await AsyncStorage.getItem(SAHUR_OFFSET_MINUTES_KEY);
+      const parsed = value ? Number(JSON.parse(value)) : 60;
+      return Number.isFinite(parsed) ? parsed : 60;
+    } catch {
+      return 60;
+    }
+  }
+
+  async setSahurOffsetMinutes(minutes: number): Promise<void> {
+    await AsyncStorage.setItem(SAHUR_OFFSET_MINUTES_KEY, JSON.stringify(minutes));
   }
 
   async setAdhanEnabled(enabled: boolean): Promise<void> {
