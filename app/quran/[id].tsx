@@ -1,6 +1,5 @@
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Ayah, quranService, SurahDetail, Tafsir, Translation } from '@/services/quran.service';
-import { Amiri_400Regular, Amiri_700Bold, useFonts } from '@expo-google-fonts/amiri';
 import { Audio } from 'expo-av';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
@@ -32,11 +31,6 @@ export default function SurahDetailScreen() {
   const [scrollProgress, setScrollProgress] = useState(0);
   const [showAyahPicker, setShowAyahPicker] = useState(false);
   const [isMushafView, setIsMushafView] = useState(false);
-
-  const [fontsLoaded] = useFonts({
-    Amiri_400Regular,
-    Amiri_700Bold,
-  });
 
   useFocusEffect(
     useCallback(() => {
@@ -214,7 +208,6 @@ export default function SurahDetailScreen() {
   };
 
   const getArabicFontFamily = (bold: boolean = false) => {
-    if (!fontsLoaded) return undefined;
     return bold ? 'Amiri_700Bold' : 'Amiri_400Regular';
   };
 
@@ -335,7 +328,7 @@ export default function SurahDetailScreen() {
     );
   };
 
-  if (loading || !fontsLoaded) {
+  if (loading) {
     return (
       <View className="flex-1 bg-white dark:bg-gray-900 items-center justify-center">
         <ActivityIndicator size="large" color="#059669" />

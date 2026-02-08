@@ -13,6 +13,7 @@ import '../i18n';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import i18n from '@/i18n';
 import { quranService } from '@/services/quran.service';
+import { Amiri_400Regular, Amiri_700Bold, useFonts } from '@expo-google-fonts/amiri';
 import { useColorScheme as useSystemColorScheme } from 'nativewind';
 import { useEffect } from 'react';
 
@@ -31,6 +32,11 @@ const MOMENT_LOCALE_MAP: { [key: string]: string } = {
 export default function RootLayout() {
   const { colorScheme } = useColorScheme();
   const { setColorScheme } = useSystemColorScheme();
+
+  const [fontsLoaded] = useFonts({
+    Amiri_400Regular,
+    Amiri_700Bold,
+  });
 
   useEffect(() => {
     setColorScheme(colorScheme);

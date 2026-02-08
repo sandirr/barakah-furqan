@@ -51,6 +51,10 @@ export default function HomeScreen() {
 
   const reminder = getDailyReminder();
 
+  const getArabicFontFamily = (bold: boolean = false) => {
+    return bold ? 'Amiri_700Bold' : 'Amiri_400Regular';
+  };
+
   return (
     <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={["top"]}>
       <ScrollView
@@ -63,7 +67,7 @@ export default function HomeScreen() {
             <Text className="text-2xl font-bold text-gray-900 dark:text-white">
               Barakah Furqan
             </Text>
-            <Text className="text-2xl font-bold text-gray-900 dark:text-white text-right">
+            <Text className="text-2xl font-bold text-gray-900 dark:text-white text-right" style={{ fontFamily: getArabicFontFamily(true) }}>
               هُدًى لِّلْمُتَّقِينَ
             </Text>
           </View>

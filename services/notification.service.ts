@@ -2,6 +2,7 @@ import i18n from '@/i18n';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Audio } from 'expo-av';
 import * as Notifications from 'expo-notifications';
+import { Platform } from 'react-native';
 import { PrayerTimes } from './prayer-times.service';
 
 const NOTIFICATION_ENABLED_KEY = '@notification_enabled';
@@ -32,6 +33,7 @@ class NotificationService {
   private sound: Audio.Sound | null = null;
 
   async requestPermissions(): Promise<boolean> {
+    await this.ensureNotificationChannels();
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
 
@@ -41,6 +43,32 @@ class NotificationService {
     }
 
     return finalStatus === 'granted';
+  }
+
+  private async ensureNotificationChannels(): Promise<void> {
+    if (Platform.OS !== 'android') return;
+
+    try {
+      await Notifications.setNotificationChannelAsync('prayer', {
+        name: 'Prayer Notifications',
+        importance: Notifications.AndroidImportance.MAX,
+        sound: 'adzan',
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#16a34a',
+        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+      });
+
+      await Notifications.setNotificationChannelAsync('sahur', {
+        name: 'Sahur Notifications',
+        importance: Notifications.AndroidImportance.HIGH,
+        sound: 'default',
+        vibrationPattern: [0, 200, 200, 200],
+        lightColor: '#f59e0b',
+        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+      });
+    } catch (error) {
+      console.error('Failed to set notification channels:', error);
+    }
   }
 
   async scheduleAllPrayerNotifications(
@@ -81,13 +109,16 @@ class NotificationService {
     try {
       const [hours, minutes] = prayerTime.split(':').map(Number);
 
+      const content = {
+        title: i18n.t('shalat.notificationTitle', { prayer: prayerName }),
+        body: i18n.t('shalat.notificationBody', { prayer: prayerName }),
+        data: { prayerName, identifier: `prayer_${identifier}`, type: 'prayer' },
+        sound: 'adzan.mp3',
+        channelId: 'prayer',
+      } as Notifications.NotificationContentInput & { channelId: string };
+
       const notificationId = await Notifications.scheduleNotificationAsync({
-        content: {
-          title: i18n.t('shalat.notificationTitle', { prayer: prayerName }),
-          body: i18n.t('shalat.notificationBody', { prayer: prayerName }),
-          data: { prayerName, identifier: `prayer_${identifier}`, type: 'prayer' },
-          sound: 'adzan.mp3',
-        },
+        content,
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.DAILY,
           hour: hours,
@@ -131,13 +162,16 @@ class NotificationService {
 
       const [hours, minutes] = sahurTime.split(':').map(Number);
 
+      const content = {
+        title: i18n.t('shalat.sahurNotificationTitle'),
+        body: i18n.t('shalat.sahurNotificationBody'),
+        data: { identifier: 'sahur', type: 'sahur' },
+        sound: 'default',
+        channelId: 'sahur',
+      } as Notifications.NotificationContentInput & { channelId: string };
+
       await Notifications.scheduleNotificationAsync({
-        content: {
-          title: i18n.t('shalat.sahurNotificationTitle'),
-          body: i18n.t('shalat.sahurNotificationBody'),
-          data: { identifier: 'sahur', type: 'sahur' },
-          sound: 'default',
-        },
+        content,
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.DAILY,
           hour: hours,
@@ -171,13 +205,16 @@ class NotificationService {
 
   async testNotification(): Promise<void> {
     try {
+      const content = {
+        title: 'Test Notifikasi',
+        body: 'Notifikasi berfungsi dengan baik! ✅',
+        data: { test: true, identifier: 'prayer_test', type: 'prayer' },
+        sound: 'adzan.mp3',
+        channelId: 'prayer',
+      } as Notifications.NotificationContentInput & { channelId: string };
+
       await Notifications.scheduleNotificationAsync({
-        content: {
-          title: 'Test Notifikasi',
-          body: 'Notifikasi berfungsi dengan baik! ✅',
-          data: { test: true, identifier: 'test' },
-          sound: 'adzan.mp3',
-        },
+        content,
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
           seconds: 2,

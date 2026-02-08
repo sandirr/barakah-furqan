@@ -3,7 +3,7 @@ import React from 'react';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { Colors } from '@/constants/theme';
-import { BookIcon, HomeIcon, Settings2 } from 'lucide-react-native';
+import { HomeIcon, Mic2Icon, Settings2 } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useColorScheme } from 'react-native';
 
@@ -35,7 +35,7 @@ export default function TabLayout() {
         options={{
           // href: null,
           title: t('navigation.quranPractice'),
-          tabBarIcon: ({ color }) => <BookIcon size={24} color={color} />,
+          tabBarIcon: ({ color }) => <Mic2Icon size={24} color={color} />,
         }}
       />
       {/* <Tabs.Screen

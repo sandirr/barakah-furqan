@@ -552,11 +552,11 @@ export default function TilawahScreen() {
     const spokenVariants = spokenTokens.flatMap((token) => buildVariants(token));
     const allSpokenCandidates = [normalizedSpoken, ...spokenVariants];
 
-    console.log('🔍 Matching:', {
-      spoken: normalizedSpoken,
-      expected: normalizedExpected,
-      tokens: spokenTokens
-    });
+    // console.log('🔍 Matching:', {
+    //   spoken: normalizedSpoken,
+    //   expected: normalizedExpected,
+    //   tokens: spokenTokens
+    // });
 
     for (const expected of expectedVariants) {
       for (const spoken of allSpokenCandidates) {
@@ -577,7 +577,7 @@ export default function TilawahScreen() {
       }
     }
 
-    console.log('📊 Similarity:', bestSimilarity, 'threshold:', threshold);
+    // console.log('📊 Similarity:', bestSimilarity, 'threshold:', threshold);
     return bestSimilarity >= threshold;
   };
 
@@ -586,7 +586,7 @@ export default function TilawahScreen() {
   // ========================================
 
   const completeSession = async () => {
-    console.log('🏁 Complete!');
+    // console.log('🏁 Complete!');
     setIsRecording(false);
     setSessionComplete(true);
     try {
@@ -667,12 +667,17 @@ export default function TilawahScreen() {
     Tts.addEventListener('tts-finish', handleTtsFinish);
     Tts.addEventListener('tts-cancel', handleTtsCancel);
 
-    return () => {
-      Tts.removeEventListener('tts-start', handleTtsStart);
-      Tts.removeEventListener('tts-finish', handleTtsFinish);
-      Tts.removeEventListener('tts-cancel', handleTtsCancel);
-    };
+    // return () => {
+    //   Tts.removeEventListener('tts-start', handleTtsStart);
+    //   Tts.removeEventListener('tts-finish', handleTtsFinish);
+    //   Tts.removeEventListener('tts-cancel', handleTtsCancel);
+    // };
+    return;
   }, []);
+
+  const getArabicFontFamily = (bold: boolean = false) => {
+    return bold ? 'Amiri_700Bold' : 'Amiri_400Regular';
+  };
 
   if (checkingPermission) {
     return (
@@ -760,7 +765,7 @@ export default function TilawahScreen() {
           </Text>
         </View>
 
-        <View className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700 mb-6">
+        {/* <View className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700 mb-6">
           <Text className="text-lg font-bold text-gray-900 dark:text-white mb-2">
             {t('tilawah.micTestTitle')}
           </Text>
@@ -789,7 +794,7 @@ export default function TilawahScreen() {
               {lastHeard ? lastHeard : t('tilawah.micTestEmpty')}
             </Text>
           </View>
-        </View>
+        </View> */}
 
         <View className="mb-6">
           <View className="flex-row items-center justify-between mb-3">
@@ -804,8 +809,9 @@ export default function TilawahScreen() {
               placeholder={t('tilawah.inputPlaceholder')}
               placeholderTextColor="#9CA3AF"
               multiline
-              className="text-gray-900 dark:text-white text-lg min-h-24 text-right"
+              className={`text-gray-900 dark:text-white min-h-12 text-right ${inputText ? 'text-4xl' : 'text-lg'}`}
               editable={!isRecording}
+              {...(inputText ? { style: { fontFamily: getArabicFontFamily(true) } } : {})}
             />
           </View>
           <TouchableOpacity onPress={useSampleText} disabled={isRecording}>
@@ -834,7 +840,7 @@ export default function TilawahScreen() {
             </View>
 
             <View className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700">
-              <View className="flex-row flex-wrap gap-2 justify-end">
+              <View className="flex-row flex-wrap gap-2">
                 {words.map((word, index) => (
                   <View key={index}>
                     <View
