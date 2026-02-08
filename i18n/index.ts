@@ -7,8 +7,13 @@ import ar from './locales/ar.json';
 import bn from './locales/bn.json';
 import en from './locales/en.json';
 import fa from './locales/fa.json';
+import fr from './locales/fr.json';
+import ha from './locales/ha.json';
+import hi from './locales/hi.json';
 import id from './locales/id.json';
 import ms from './locales/ms.json';
+import ru from './locales/ru.json';
+import so from './locales/so.json';
 import tr from './locales/tr.json';
 import ur from './locales/ur.json';
 
@@ -18,6 +23,11 @@ const resources = {
   en: { translation: en },
   id: { translation: id },
   ms: { translation: ms },
+  hi: { translation: hi },
+  fr: { translation: fr },
+  ru: { translation: ru },
+  ha: { translation: ha },
+  so: { translation: so },
   ur: { translation: ur },
   ar: { translation: ar },
   tr: { translation: tr },
@@ -25,7 +35,7 @@ const resources = {
   fa: { translation: fa },
 };
 
-const SUPPORTED_LANGUAGES = ['en', 'id', 'ms', 'ur', 'ar', 'tr', 'bn', 'fa'];
+const SUPPORTED_LANGUAGES = ['en', 'id', 'ms', 'hi', 'fr', 'ru', 'ha', 'so', 'ur', 'ar', 'tr', 'bn', 'fa'];
 
 const getDeviceLanguage = (): string => {
   const deviceLang = Localization.getLocales()[0]?.languageCode || 'en';

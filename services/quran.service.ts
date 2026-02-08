@@ -118,6 +118,31 @@ class QuranService {
         tafsir: 'fa.ayati',
         hasTranslation: true
       },
+      hi: {
+        translation: 'hi.hindi',
+        tafsir: 'hi.hindi',
+        hasTranslation: true
+      },
+      fr: {
+        translation: 'fr.hamidullah',
+        tafsir: 'fr.hamidullah',
+        hasTranslation: true
+      },
+      ru: {
+        translation: 'ru.kuliev',
+        tafsir: 'ru.kuliev',
+        hasTranslation: true
+      },
+      ha: {
+        translation: 'ha.gumi',
+        tafsir: 'ha.gumi',
+        hasTranslation: true
+      },
+      so: {
+        translation: 'so.abduh',
+        tafsir: 'so.abduh',
+        hasTranslation: true
+      },
     };
 
     return editionMap[language] || editionMap['en'];

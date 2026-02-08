@@ -3,7 +3,7 @@ import { Ayah, quranService, SurahDetail, Tafsir, Translation } from '@/services
 import { Audio } from 'expo-av';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { ALargeSmall, ArrowUp, BookOpen, BookText, ChevronLeft, Languages, ListOrdered, Pause, Play, Square, X } from 'lucide-react-native';
+import { ALargeSmall, ArrowUp, BookOpen, BookText, ChevronLeft, Languages, ListOrdered, Mic, Pause, Play, Square, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, FlatList, Modal, NativeScrollEvent, NativeSyntheticEvent, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
@@ -287,7 +287,7 @@ export default function SurahDetailScreen() {
         {!isMushafView && (
           <View className="flex-row items-center mb-3">
             <View className="w-8 h-8 bg-emerald-600 dark:bg-emerald-700 rounded-full items-center justify-center">
-              <Text className="text-white font-bold text-xs">{item.numberInSurah}</Text>
+              <Text className="text-white font-bold text-xs">{toArabicIndicNumber(item.numberInSurah)}</Text>
             </View>
             <View className="flex-1 h-px bg-gray-200 dark:bg-gray-700 ml-3" />
             <TouchableOpacity
@@ -304,6 +304,13 @@ export default function SurahDetailScreen() {
                 <BookText size={20} color="#0d9488" />
               </TouchableOpacity>
             )}
+            <TouchableOpacity
+              onPress={() => router.push({ pathname: '/quran-practice', params: { text: verseText } })}
+              className="ml-2 w-10 h-10 bg-sky-100 dark:bg-sky-900 rounded-full items-center justify-center"
+              accessibilityLabel={t('quran.tilawah')}
+            >
+              <Mic size={20} color="#0ea5e9" />
+            </TouchableOpacity>
           </View>
         )}
 
@@ -320,7 +327,7 @@ export default function SurahDetailScreen() {
               className="text-gray-900 dark:text-white leading-6"
               style={{ fontSize: sizes.translation }}
             >
-              {translation.text}
+              {item.numberInSurah}. {translation.text}
             </Text>
           </View>
         )}

@@ -7,6 +7,8 @@ import {
   useSpeechRecognitionEvent
 } from 'expo-speech-recognition';
 import {
+  ChevronDown,
+  ChevronUp,
   CircleCheck,
   Info,
   Mic,
@@ -73,6 +75,7 @@ export default function TilawahScreen() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [lastHeard, setLastHeard] = useState('');
   const [isMicTestActive, setIsMicTestActive] = useState(false);
+  const [isHowToOpen, setIsHowToOpen] = useState(true);
   
   // Refs
   const recognitionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -737,13 +740,21 @@ export default function TilawahScreen() {
   return (
     <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={["top"]}>
       <ScrollView className='flex-1' contentContainerStyle={{padding: 16}}>
-        <View className="items-center mb-8">
-          <View className="w-20 h-20 bg-teal-600 dark:bg-teal-700 rounded-full items-center justify-center mb-4">
+        <View className="mb-6 flex-row items-center justify-between">
+          <View className="w-20 h-20 bg-teal-600 dark:bg-teal-700 rounded-full items-center justify-center">
             <Mic size={40} color="#FFFFFF" />
           </View>
-          <Text className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            {t('tilawah.title')}
-          </Text>
+          <View className="items-end">
+            <Text className="text-2xl font-bold text-gray-900 dark:text-white">
+              {t('tilawah.title')} (Beta)
+            </Text>
+            <Text
+              className="text-2xl font-bold text-gray-900 dark:text-white text-right"
+              style={{ fontFamily: getArabicFontFamily(true) }}
+            >
+              اقرأ
+            </Text>
+          </View>
         </View>
 
         {isInitializing && (
@@ -756,13 +767,32 @@ export default function TilawahScreen() {
         )}
 
         <View className="bg-teal-600 dark:bg-teal-700 rounded-3xl p-6 mb-6">
-          <Text className="text-white text-xl font-bold mb-3">{t('tilawah.howToUse')}</Text>
-          <Text className="text-teal-50">
-            {t('tilawah.step1')}{'\n'}
-            {t('tilawah.step2')}{'\n'}
-            {t('tilawah.step3')}{'\n'}
-            {t('tilawah.step4')}
-          </Text>
+          <TouchableOpacity
+            onPress={() => setIsHowToOpen((prev) => !prev)}
+            className="flex-row items-center justify-between"
+            activeOpacity={0.8}
+          >
+            <Text className="text-white text-xl font-bold">{t('tilawah.howToUse')}</Text>
+            {isHowToOpen ?
+              <ChevronUp
+                size={20}
+                color="#FFFFFF"
+              />
+              :
+              <ChevronDown
+                size={20}
+                color="#FFFFFF"
+              />
+            }
+          </TouchableOpacity>
+          {isHowToOpen && (
+            <Text className="text-teal-50 mt-3">
+              {t('tilawah.step1')}{'\n'}
+              {t('tilawah.step2')}{'\n'}
+              {t('tilawah.step3')}{'\n'}
+              {t('tilawah.step4')}
+            </Text>
+          )}
         </View>
 
         {/* <View className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700 mb-6">
@@ -796,32 +826,8 @@ export default function TilawahScreen() {
           </View>
         </View> */}
 
-        <View className="mb-6">
-          <View className="flex-row items-center justify-between mb-3">
-            <Text className="text-lg font-bold text-gray-900 dark:text-white">
-              {t('tilawah.quranText')}
-            </Text>
-          </View>
-          <View className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-200 dark:border-gray-700 mb-3">
-            <TextInput
-              value={inputText}
-              onChangeText={setInputText}
-              placeholder={t('tilawah.inputPlaceholder')}
-              placeholderTextColor="#9CA3AF"
-              multiline
-              className={`text-gray-900 dark:text-white min-h-12 text-right ${inputText ? 'text-4xl' : 'text-lg'}`}
-              editable={!isRecording}
-              {...(inputText ? { style: { fontFamily: getArabicFontFamily(true) } } : {})}
-            />
-          </View>
-          <TouchableOpacity onPress={useSampleText} disabled={isRecording}>
-            <Text className={`text-teal-600 dark:text-teal-500 font-semibold text-right ${isRecording ? 'opacity-50' : ''}`}>
-              {t('tilawah.useSample')}
-            </Text>
-          </TouchableOpacity>
-        </View>
 
-        {words.length > 0 && (
+        {words.length > 0 ? (
           <View className="mb-6">
             <View className="flex-row items-center justify-between mb-3">
               <Text className="text-lg font-bold text-gray-900 dark:text-white">
@@ -840,7 +846,7 @@ export default function TilawahScreen() {
             </View>
 
             <View className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700">
-              <View className="flex-row flex-wrap gap-2">
+              <View className="flex-row flex-wrap gap-2" style={{ flexDirection: 'row-reverse' }}>
                 {words.map((word, index) => (
                   <View key={index}>
                     <View
@@ -854,7 +860,10 @@ export default function TilawahScreen() {
                           : 'bg-gray-100 dark:bg-gray-700'
                       }`}
                     >
-                      <Text className={`text-lg font-bold ${word.status !== 'pending' ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
+                      <Text
+                        className={`text-lg font-bold ${word.status !== 'pending' ? 'text-white' : 'text-gray-900 dark:text-white'}`}
+                        style={{ textAlign: 'right' }}
+                      >
                         {word.text}
                       </Text>
                     </View>
@@ -867,6 +876,31 @@ export default function TilawahScreen() {
                 ))}
               </View>
             </View>
+          </View>
+        ) : (
+          <View className="mb-6">
+            <View className="flex-row items-center justify-between mb-3">
+              <Text className="text-lg font-bold text-gray-900 dark:text-white">
+                {t('tilawah.quranText')}
+              </Text>
+            </View>
+            <View className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-200 dark:border-gray-700 mb-3">
+              <TextInput
+                value={inputText}
+                onChangeText={setInputText}
+                placeholder={t('tilawah.inputPlaceholder')}
+                placeholderTextColor="#9CA3AF"
+                multiline
+                className={`text-gray-900 dark:text-white min-h-12 text-right ${inputText ? 'text-4xl' : 'text-lg'}`}
+                editable={!isRecording}
+                {...(inputText ? { style: { fontFamily: getArabicFontFamily(true) } } : {})}
+              />
+            </View>
+            <TouchableOpacity onPress={useSampleText} disabled={isRecording}>
+              <Text className={`text-teal-600 dark:text-teal-500 font-semibold text-right ${isRecording ? 'opacity-50' : ''}`}>
+                {t('tilawah.useSample')}
+              </Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -935,7 +969,7 @@ export default function TilawahScreen() {
               </View>
               {isRecording && (
                 <View className="mt-3 bg-amber-50 dark:bg-amber-950 rounded-xl p-4">
-                  <Text className="text-amber-900 dark:text-amber-100 font-semibold mb-2">
+                  <Text className="text-amber-900 dark:text-amber-100 font-semibold mb-2 text-center">
                     {t('tilawah.reciteSentenceTitle')}
                   </Text>
                   <Text className="text-amber-700 dark:text-amber-300 text-sm mt-1 text-center">
