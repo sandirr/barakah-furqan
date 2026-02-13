@@ -3,20 +3,23 @@
     "name": "Barakah Furqan",
     "slug": "barakah-furqan",
     "version": "1.0.0",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/images/icon-barakah.png",
     "scheme": "barakahfurqan",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
+      "buildNumber": "1",
       "supportsTablet": true,
       "infoPlist": {
         "NSSpeechRecognitionUsageDescription": "Allow $(PRODUCT_NAME) to use speech recognition.",
-        "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to use the microphone."
+        "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to use the microphone.",
+        "LSApplicationQueriesSchemes": ["itms-apps"]
       },
       "bundleIdentifier": "com.anonymous.barakahfurqan"
     },
     "android": {
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#059669",
         "foregroundImage": "./assets/images/icon-barakah.png"

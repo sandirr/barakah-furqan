@@ -94,6 +94,9 @@
   "about": {
     "title": "Game da",
     "description": "Barakah Furqan an ƙirƙire ta ne don taimaka maka ka karanta, ka fahimta, kuma ka yi atisaye da Al‑Qur'ani tare da tallafin ruhaniya na kullum.",
+    "checkUpdates": "Duba Sabuntawa",
+    "noUpdateAvailable": "Kana kan sigar da ta fi sabo.",
+    "updateCheckFailed": "Ba a iya duba sabuntawa. Sake gwadawa ko sabunta daga kantin sayarwa.",
     "dataTitle": "Bayanai & Sabis",
     "dataIntro": "Wannan app yana amfani da bayanai/sabis masu zuwa don muhimman ayyuka:",
     "dataLocation": "Samun wuri don hanyar Qibla da lokutan sallah.",
@@ -179,6 +182,7 @@
     "checking": "Ana dubawa...",
     "usingCache": "Ana amfani da bayanan cache",
     "usingCacheDesc": "Ana nuna jadawalin sallah daga cache. Sabunta don sabbin bayanai.",
+    "cacheWarning": "Ana buƙatar intanet don bayanai na lokaci-take da sabuntawar wuri",
     "locationPermissionRequired": "Ana buƙatar izinin wuri",
     "locationPermissionRequiredDesc": "App na buƙatar damar wuri don lissafin lokutan sallah. A kunna a saituna.",
     "scheduledNotifications": "sanarwar da aka tsara",

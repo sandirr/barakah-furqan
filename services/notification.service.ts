@@ -52,7 +52,7 @@ class NotificationService {
       await Notifications.setNotificationChannelAsync('prayer', {
         name: 'Prayer Notifications',
         importance: Notifications.AndroidImportance.MAX,
-        sound: 'adzan',
+        sound: 'adzan.mp3',
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#16a34a',
         lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,

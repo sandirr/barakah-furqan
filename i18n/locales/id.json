@@ -94,6 +94,9 @@
   "about": {
     "title": "Tentang",
     "description": "Barakah Furqan dirancang untuk membantu Anda membaca, memahami, dan berlatih Al-Quran dengan dukungan spiritual harian.",
+    "checkUpdates": "Periksa Pembaruan",
+    "noUpdateAvailable": "Anda menggunakan versi terbaru.",
+    "updateCheckFailed": "Tidak dapat memeriksa pembaruan. Coba lagi atau perbarui dari toko aplikasi.",
     "dataTitle": "Data & Layanan",
     "dataIntro": "Aplikasi ini menggunakan data/layanan berikut untuk menjalankan fitur utama:",
     "dataLocation": "Akses lokasi untuk arah kiblat dan waktu shalat.",
@@ -179,6 +182,7 @@
     "checking": "Memeriksa persyaratan...",
     "usingCache": "Menggunakan Data Cache",
     "usingCacheDesc": "Menampilkan jadwal shalat dari cache. Refresh untuk data terbaru.",
+    "cacheWarning": "Internet diperlukan untuk data real-time dan pembaruan lokasi",
     "locationPermissionRequired": "Izin Lokasi Diperlukan",
     "locationPermissionRequiredDesc": "Aplikasi memerlukan akses lokasi untuk menghitung waktu shalat. Silakan aktifkan di pengaturan.",
     "scheduledNotifications": "notifikasi terjadwal",

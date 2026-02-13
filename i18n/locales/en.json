@@ -94,6 +94,9 @@
   "about": {
     "title": "About",
     "description": "Barakah Furqan is designed to help you read, understand, and practice the Quran with daily spiritual support.",
+    "checkUpdates": "Check for Updates",
+    "noUpdateAvailable": "You are on the latest version.",
+    "updateCheckFailed": "Could not check for updates. Please try again or update from the store.",
     "dataTitle": "Data & Services",
     "dataIntro": "This app uses the following data/services to enable core features:",
     "dataLocation": "Location access for Qibla direction and prayer times.",
@@ -179,6 +182,7 @@
     "checking": "Checking requirements...",
     "usingCache": "Using Cached Data",
     "usingCacheDesc": "Displaying prayer schedule from cache. Refresh for latest data.",
+    "cacheWarning": "Internet required for real-time data and location updates",
     "locationPermissionRequired": "Location Permission Required",
     "locationPermissionRequiredDesc": "The app needs location access to calculate prayer times. Please enable it in settings.",
     "scheduledNotifications": "scheduled notifications",

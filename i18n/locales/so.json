@@ -94,6 +94,9 @@
   "about": {
     "title": "Ku saabsan",
     "description": "Barakah Furqan waxaa loogu talagalay inay kaa caawiso akhrinta, fahamka, iyo ku‑tababarka Qur'aanka iyadoo la haysto taageero ruuxi ah maalin kasta.",
+    "checkUpdates": "Ka hubi cusboonaysiinta",
+    "noUpdateAvailable": "Waxaad isticmaashaa noocda ugu dambeeyay.",
+    "updateCheckFailed": "Lama hubin karo cusboonaysiinta. Ku dayo ama ka cusboonayso dukaanka.",
     "dataTitle": "Xog & Adeegyo",
     "dataIntro": "App‑kani wuxuu isticmaalaa xog/adeegyo si loo shaqaysiiyo astaamaha muhiimka ah:",
     "dataLocation": "Helitaanka goobta si loo helo jihada Qibla iyo waqtiga salaadda.",
@@ -179,6 +182,7 @@
     "checking": "Shuruudaha waa la hubinayaa...",
     "usingCache": "Waxaa la isticmaalayaa kaydka",
     "usingCacheDesc": "Jadwalka salaadda waxaa laga soo bandhigayaa kaydka. Cusboonaysii si aad u hesho xog cusub.",
+    "cacheWarning": "Internetka waa lagama maarmaan xogta real-time iyo cusboonaysiinta goobta",
     "locationPermissionRequired": "Oggolaanshaha goobta waa loo baahan yahay",
     "locationPermissionRequiredDesc": "App‑ku wuxuu u baahan yahay oggolaanshaha goobta si uu u xisaabiyo waqtiga salaadda. Fadlan ka daar dejinta.",
     "scheduledNotifications": "ogeeysiisyo jadwalaysan",

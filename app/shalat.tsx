@@ -64,6 +64,7 @@ export default function ShalatScreen() {
   const [hasLocationPermission, setHasLocationPermission] = useState(false);
   const [hasInternet, setHasInternet] = useState(false);
   const [checkingRequirements, setCheckingRequirements] = useState(true);
+  const [hasCache, setHasCache] = useState(false);
 
   useEffect(() => {
     initializeScreen();
@@ -116,14 +117,23 @@ export default function ShalatScreen() {
         setPrayerTimes(cached);
         await updateNextPrayer(cached);
         setIsUsingCache(true);
+        setHasCache(true);
+      } else {
+        setHasCache(false);
       }
     } catch (err) {
       console.error('Cache load error:', err);
+      setHasCache(false);
     }
   };
 
   const checkRequirements = async () => {
     setCheckingRequirements(true);
+    
+    // Check cache directly instead of relying on state
+    const cached = await prayerTimesService.getCachedPrayerTimes();
+    const cacheExists = !!cached;
+    setHasCache(cacheExists);
     
     const netInfo = await NetInfo.fetch();
     const internetAvailable = netInfo.isConnected && netInfo.isInternetReachable !== false;
@@ -135,9 +145,39 @@ export default function ShalatScreen() {
 
     setCheckingRequirements(false);
 
-    if (locationGranted && internetAvailable) {
-      await loadSettings();
-      await requestNotificationPermission();
+    // Load settings regardless of internet status
+    await loadSettings();
+    await requestNotificationPermission();
+
+    // If we have cache and location permission, proceed even without internet
+    if (cacheExists && locationGranted) {
+      // Try to load fresh data if internet is available, but don't block if it's not
+      if (internetAvailable) {
+        await loadPrayerTimes();
+      } else {
+        // Use cached data, but try to get location if we don't have it
+        if (!location) {
+          try {
+            const locationResult = await Location.getCurrentPositionAsync({
+              accuracy: Location.Accuracy.Balanced,
+              timeInterval: 5000,
+            });
+            setLocation({
+              lat: locationResult.coords.latitude,
+              lng: locationResult.coords.longitude,
+            });
+            tryReverseGeocode({
+              lat: locationResult.coords.latitude,
+              lng: locationResult.coords.longitude,
+            }).catch(() => {});
+          } catch (err) {
+            console.error('Location error:', err);
+          }
+        }
+        setLoading(false);
+      }
+    } else if (locationGranted && internetAvailable) {
+      // No cache, so internet is required
       await loadPrayerTimes();
     } else {
       setLoading(false);
@@ -454,7 +494,11 @@ export default function ShalatScreen() {
     );
   }
 
-  if (!hasLocationPermission || !hasInternet) {
+  // Only require internet if there's no cache
+  const requiresInternet = !hasCache;
+  const canProceed = hasLocationPermission && (hasInternet || hasCache);
+  
+  if (!hasLocationPermission || (requiresInternet && !hasInternet)) {
     return (
       <SafeAreaView className="flex-1 bg-green-600 dark:bg-green-700">
         <View className="p-4 bg-green-600 dark:bg-green-700">
@@ -501,31 +545,33 @@ export default function ShalatScreen() {
               )}
             </View>
 
-            <View className={`p-4 rounded-xl ${hasInternet ? 'bg-green-50 dark:bg-green-950' : 'bg-red-50 dark:bg-red-950'}`}>
-              <View className="flex-row items-center mb-2">
-                {hasInternet ? (
-                  <CircleCheck size={24} color="#16a34a" />
-                ) : (
-                  <X size={24} color="#dc2626" />
-                )}
-                <Text className={`ml-2 font-semibold ${hasInternet ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
-                  {t('shalat.internetConnection')}
-                </Text>
-              </View>
-              <Text className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                {t('shalat.internetConnectionDesc')}
-              </Text>
-              {!hasInternet && (
-                <TouchableOpacity
-                  onPress={() => Linking.openSettings()}
-                  className="bg-red-600 py-2 px-4 rounded-lg"
-                >
-                  <Text className="text-white font-semibold text-center">
-                    {t('shalat.openSettings')}
+            {requiresInternet && (
+              <View className={`p-4 rounded-xl ${hasInternet ? 'bg-green-50 dark:bg-green-950' : 'bg-red-50 dark:bg-red-950'}`}>
+                <View className="flex-row items-center mb-2">
+                  {hasInternet ? (
+                    <CircleCheck size={24} color="#16a34a" />
+                  ) : (
+                    <X size={24} color="#dc2626" />
+                  )}
+                  <Text className={`ml-2 font-semibold ${hasInternet ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
+                    {t('shalat.internetConnection')}
                   </Text>
-                </TouchableOpacity>
-              )}
-            </View>
+                </View>
+                <Text className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                  {t('shalat.internetConnectionDesc')}
+                </Text>
+                {!hasInternet && (
+                  <TouchableOpacity
+                    onPress={() => Linking.openSettings()}
+                    className="bg-red-600 py-2 px-4 rounded-lg"
+                  >
+                    <Text className="text-white font-semibold text-center">
+                      {t('shalat.openSettings')}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
           </View>
 
           <TouchableOpacity
@@ -593,6 +639,24 @@ export default function ShalatScreen() {
             <Text className="text-red-700 dark:text-red-300 text-sm">
               ⚠️ {error}
             </Text>
+          </View>
+        )}
+
+        {isUsingCache && !hasInternet && (
+          <View className="bg-amber-50 dark:bg-amber-950 rounded-xl p-4 mb-4 border border-amber-200 dark:border-amber-800">
+            <View className="flex-row items-start">
+              <View className="mr-2 mt-0.5">
+                <TriangleAlert size={20} color="#d97706" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-amber-800 dark:text-amber-200 font-semibold text-sm mb-1">
+                  {t('shalat.usingCache')}
+                </Text>
+                <Text className="text-amber-700 dark:text-amber-300 text-xs">
+                  {t('shalat.cacheWarning')}
+                </Text>
+              </View>
+            </View>
           </View>
         )}
 
