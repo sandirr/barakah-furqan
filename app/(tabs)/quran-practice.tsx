@@ -708,7 +708,7 @@ export default function TilawahScreen() {
   if (checkingPermission) {
     return (
       <View className="flex-1 bg-white dark:bg-gray-900 items-center justify-center">
-        <ActivityIndicator size="large" color="#0d9488" />
+        <ActivityIndicator size="large" color="#059669" />
         <Text className="text-gray-600 dark:text-gray-400 mt-4">{t('tilawah.checking')}</Text>
       </View>
     );
@@ -716,7 +716,7 @@ export default function TilawahScreen() {
 
   if (!hasMicPermission) {
     return (
-      <SafeAreaView className="flex-1 bg-teal-600 dark:bg-teal-700" edges={["top"]}>
+      <SafeAreaView className="flex-1 bg-emerald-600 dark:bg-emerald-700" edges={["top"]}>
         <View className="p-4">
           <Text className="text-2xl font-bold text-white">{t('tilawah.title')}</Text>
         </View>
@@ -749,7 +749,7 @@ export default function TilawahScreen() {
 
           <TouchableOpacity
             onPress={checkPermissions}
-            className="mt-8 bg-teal-600 py-3 px-8 rounded-xl"
+            className="mt-8 bg-emerald-600 py-3 px-8 rounded-xl"
           >
             <Text className="text-white font-semibold text-center">
               {t('tilawah.checkAgain')}
@@ -764,7 +764,7 @@ export default function TilawahScreen() {
     <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={["top"]}>
       <ScrollView className='flex-1' contentContainerStyle={{padding: 16}}>
         <View className="mb-6 flex-row items-center justify-between">
-          <View className="w-20 h-20 bg-teal-600 dark:bg-teal-700 rounded-full items-center justify-center">
+          <View className="w-20 h-20 bg-emerald-600 dark:bg-emerald-700 rounded-full items-center justify-center">
             <Mic size={40} color="#FFFFFF" />
           </View>
           <View className="items-end">
@@ -782,14 +782,14 @@ export default function TilawahScreen() {
 
         {isInitializing && (
           <View className="bg-blue-50 dark:bg-blue-950 rounded-2xl p-6 mb-6">
-            <ActivityIndicator size="large" color="#0d9488" />
+            <ActivityIndicator size="large" color="#059669" />
             <Text className="text-center text-gray-900 dark:text-white mt-4 font-semibold">
               {t('tilawah.preparingSpeech')}
             </Text>
           </View>
         )}
 
-        <View className="bg-teal-600 dark:bg-teal-700 rounded-3xl p-6 mb-6">
+        <View className="bg-emerald-600 dark:bg-emerald-700 rounded-3xl p-6 mb-6">
           <TouchableOpacity
             onPress={() => setIsHowToOpen((prev) => !prev)}
             className="flex-row items-center justify-between"
@@ -809,7 +809,7 @@ export default function TilawahScreen() {
             }
           </TouchableOpacity>
           {isHowToOpen && (
-            <Text className="text-teal-50 mt-3">
+            <Text className="text-emerald-50 mt-3">
               {t('tilawah.step1')}{'\n'}
               {t('tilawah.step2')}{'\n'}
               {t('tilawah.step3')}{'\n'}
@@ -829,7 +829,7 @@ export default function TilawahScreen() {
             {!isMicTestActive ? (
               <TouchableOpacity
                 onPress={startMicTest}
-                className="flex-1 bg-teal-600 dark:bg-teal-700 rounded-xl py-3"
+                className="flex-1 bg-emerald-600 dark:bg-emerald-700 rounded-xl py-3"
               >
                 <Text className="text-white font-semibold text-center">{t('tilawah.micTestStart')}</Text>
               </TouchableOpacity>
@@ -856,14 +856,14 @@ export default function TilawahScreen() {
               <Text className="text-lg font-bold text-gray-900 dark:text-white">
                 {t('tilawah.progress')}
               </Text>
-              <Text className="text-teal-600 dark:text-teal-500 font-bold">
+              <Text className="text-emerald-600 dark:text-emerald-500 font-bold">
                 {progress}%
               </Text>
             </View>
             
             <View className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full mb-4">
               <View 
-                className="h-full bg-teal-600 dark:bg-teal-500 rounded-full"
+                className="h-full bg-emerald-600 dark:bg-emerald-500 rounded-full"
                 style={{ width: `${progress}%` }}
               />
             </View>
@@ -920,7 +920,7 @@ export default function TilawahScreen() {
               />
             </View>
             <TouchableOpacity onPress={useSampleText} disabled={isRecording}>
-              <Text className={`text-teal-600 dark:text-teal-500 font-semibold text-right ${isRecording ? 'opacity-50' : ''}`}>
+              <Text className={`text-emerald-600 dark:text-emerald-500 font-semibold text-right ${isRecording ? 'opacity-50' : ''}`}>
                 {t('tilawah.useSample')}
               </Text>
             </TouchableOpacity>
@@ -930,7 +930,7 @@ export default function TilawahScreen() {
         {sessionComplete && (
           <View className="mb-6">
             <LinearGradient
-              colors={colorScheme === 'dark' ? ['#115e59', '#134e4a'] : ['#0d9488', '#0f766e']}
+              colors={colorScheme === 'dark' ? ['#065f46', '#064e3b'] : ['#059669', '#047857']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={{ borderRadius: 24, padding: 24 }}
@@ -947,7 +947,7 @@ export default function TilawahScreen() {
                   <Text className="text-white text-center text-5xl font-bold">
                     {getScorePercentage()}%
                   </Text>
-                  <Text className="text-teal-50 text-center mt-2">
+                  <Text className="text-emerald-50 text-center mt-2">
                     {t('tilawah.correctWords', { correct: score.correct, total: score.total })}
                   </Text>
                   
@@ -1012,7 +1012,7 @@ export default function TilawahScreen() {
                 disabled={!inputText.trim() || isInitializing}
                 className={`flex-1 rounded-2xl py-4 ${
                   inputText.trim() && !isInitializing
-                    ? 'bg-teal-600 dark:bg-teal-700'
+                    ? 'bg-emerald-600 dark:bg-emerald-700'
                     : 'bg-gray-300 dark:bg-gray-700'
                 }`}
               >
@@ -1040,7 +1040,7 @@ export default function TilawahScreen() {
         </View>
 
         <LinearGradient
-          colors={colorScheme === 'dark' ? ['#1f2937', '#374151'] : ['#d1fae5', '#ccfbf1']}
+          colors={colorScheme === 'dark' ? ['#1f2937', '#374151'] : ['#d1fae5', '#a7f3d0']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={{ borderRadius: 16, padding: 24 }}

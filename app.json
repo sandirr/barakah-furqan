@@ -2,31 +2,31 @@
   "expo": {
     "name": "Barakah Furqan",
     "slug": "barakah-furqan",
-    "version": "1.0.6",
+    "version": "1.0.0",
     "orientation": "default",
     "icon": "./assets/images/icon-barakah.png",
     "scheme": "barakahfurqan",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "buildNumber": "6",
+      "buildNumber": "1",
       "supportsTablet": true,
       "infoPlist": {
         "NSSpeechRecognitionUsageDescription": "Allow $(PRODUCT_NAME) to use speech recognition.",
         "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to use the microphone.",
         "LSApplicationQueriesSchemes": ["itms-apps"]
       },
-      "bundleIdentifier": "com.anonymous.barakahfurqan"
+      "bundleIdentifier": "com.barakah.furqan"
     },
     "android": {
-      "versionCode": 6,
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#059669",
         "foregroundImage": "./assets/images/icon-barakah.png"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.barakahfurqan",
+      "package": "com.barakah.furqan",
       "permissions": [
         "android.permission.RECORD_AUDIO"
       ]
