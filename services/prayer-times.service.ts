@@ -234,13 +234,13 @@ class PrayerTimesService {
     const monthName = (times.hijriMonthName || '').toLowerCase().replace(/[^a-z]/g, '');
     const day = times.hijriDay ?? NaN;
 
-    const isRamadan = monthName.includes('ramadan') || monthName.includes('ramadhan');
-    const isShaban = monthName.includes('shaban') || monthName.includes('saban');
-    const isShawwal = monthName.includes('shawwal') || monthName.includes('syawal');
+    const isShaban = monthName.includes('shabn');
+    const isRamadan = monthName.includes('ramadan') || monthName.includes('ramadhan') || monthName.includes('raman');
+    const isShawwal = monthName.includes('shawwal') || monthName.includes('syawal') || monthName.includes('shawal');
 
     if (isRamadan) return true;
     if (isShaban && Number.isFinite(day)) {
-      return day >= 29;
+      return day >= 28;
     }
     if (isShawwal && Number.isFinite(day)) {
       return day <= 1;

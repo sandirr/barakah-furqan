@@ -724,7 +724,7 @@ export default function ShalatScreen() {
             );
           })}
 
-          {isRamadanWindow && sahurTime && (
+          {isRamadanWindow && (
             <View className="flex-row items-center p-4 border-t border-gray-100 dark:border-gray-700">
               <View className="w-12 h-12 bg-amber-100 dark:bg-amber-900 rounded-xl items-center justify-center mr-4">
                 <Moon size={24} color="#d97706" />
@@ -744,46 +744,6 @@ export default function ShalatScreen() {
           )}
         </View>
 
-        {location && (
-          <View className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 mb-4">
-            <View className="p-4 border-b border-gray-100 dark:border-gray-700">
-              <Text className="text-lg font-bold text-gray-900 dark:text-white">
-                {t('shalat.location')}
-              </Text>
-            </View>
-            <View className="p-4">
-              {locationName && (
-                <View className="flex-row items-center mb-3">
-                  <View className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full items-center justify-center mr-3">
-                    <Building2 size={20} color="#2563eb" />
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                      {t('shalat.city')}
-                    </Text>
-                    <Text className="text-base font-semibold text-gray-900 dark:text-white">
-                      {locationName}
-                    </Text>
-                  </View>
-                </View>
-              )}
-              <View className="flex-row items-center">
-                <View className="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-full items-center justify-center mr-3">
-                  <LocateFixed size={20} color="#059669" />
-                </View>
-                <View className="flex-1">
-                  <Text className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                    {t('shalat.coordinates')}
-                  </Text>
-                  <Text className="text-sm font-mono text-gray-900 dark:text-white">
-                    {location.lat.toFixed(6)}, {location.lng.toFixed(6)}
-                  </Text>
-                </View>
-              </View>
-            </View>
-          </View>
-        )}
-
         <View className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 mb-4">
           <View className="p-4 border-b border-gray-100 dark:border-gray-700">
             <Text className="text-lg font-bold text-gray-900 dark:text-white">
@@ -791,7 +751,7 @@ export default function ShalatScreen() {
             </Text>
           </View>
 
-          {isRamadanWindow && sahurTime && (
+          {isRamadanWindow && (
             <View className="p-4 border-b border-gray-100 dark:border-gray-700">
               <View className="flex-row items-center justify-between">
                 <View className="flex-1 mr-4">
@@ -859,6 +819,46 @@ export default function ShalatScreen() {
             />
           </View>
         </View>
+
+        {location && (
+          <View className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 mb-4">
+            <View className="p-4 border-b border-gray-100 dark:border-gray-700">
+              <Text className="text-lg font-bold text-gray-900 dark:text-white">
+                {t('shalat.location')}
+              </Text>
+            </View>
+            <View className="p-4">
+              {locationName && (
+                <View className="flex-row items-center mb-3">
+                  <View className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full items-center justify-center mr-3">
+                    <Building2 size={20} color="#2563eb" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                      {t('shalat.city')}
+                    </Text>
+                    <Text className="text-base font-semibold text-gray-900 dark:text-white">
+                      {locationName}
+                    </Text>
+                  </View>
+                </View>
+              )}
+              <View className="flex-row items-center">
+                <View className="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-full items-center justify-center mr-3">
+                  <LocateFixed size={20} color="#059669" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                    {t('shalat.coordinates')}
+                  </Text>
+                  <Text className="text-sm font-mono text-gray-900 dark:text-white">
+                    {location.lat.toFixed(6)}, {location.lng.toFixed(6)}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        )}
 
         {adhanEnabled && __DEV__ && (
           <TouchableOpacity
