@@ -5,9 +5,9 @@ import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
 import { router } from 'expo-router';
 import {
-  ArrowLeft,
   Bell,
   Building2,
+  ChevronLeft,
   CircleCheck,
   Clock,
   LocateFixed,
@@ -504,7 +504,7 @@ export default function ShalatScreen() {
         <View className="p-4 bg-green-600 dark:bg-green-700">
           <View className="flex-row items-center">
             <TouchableOpacity onPress={() => router.back()} className="mr-3">
-              <ArrowLeft size={24} color="#FFFFFF" />
+              <ChevronLeft size={24} color="#FFFFFF" />
             </TouchableOpacity>
             <Text className="text-2xl font-bold text-white flex-1">
               {t('shalat.title')}
@@ -592,7 +592,7 @@ export default function ShalatScreen() {
       <View className="p-4 bg-green-600 dark:bg-green-700">
         <View className="flex-row items-center mb-2">
           <TouchableOpacity onPress={() => router.back()} className="mr-3">
-            <ArrowLeft size={24} color="#FFFFFF" />
+            <ChevronLeft size={24} color="#FFFFFF" />
           </TouchableOpacity>
           <Text className="text-2xl font-bold text-white flex-1">
             {t('shalat.title')}
