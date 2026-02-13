@@ -573,40 +573,49 @@ export default function KiblatScreen() {
                   </View>
                 );
               })}
+
+              {qiblaDirection !== null && (
+                <View
+                  style={{
+                    position: 'absolute',
+                    bottom: '50%',
+                    left: '50%',
+                    width: 50,
+                    height: 60,
+                    marginLeft: -25,
+                    transform: [
+                      { translateX: -25 },
+                      { translateY: -60 },
+                      { rotate: `${qiblaDirection}deg` },
+                      { translateX: 25 },
+                      { translateY: 60 },
+                    ],
+                  }}
+                >
+                  <View className="items-center flex-1">
+                    <View className="w-12 h-12 bg-teal-600 dark:bg-teal-700 rounded-full items-center justify-center shadow-lg">
+                      <Landmark size={24} color="#FFFFFF" />
+                    </View>
+                    <View className="w-1 h-12 bg-teal-600 dark:bg-teal-700" />
+                    <View 
+                      style={{
+                        width: 0,
+                        height: 0,
+                        backgroundColor: 'transparent',
+                        borderStyle: 'solid',
+                        borderLeftWidth: 8,
+                        borderRightWidth: 8,
+                        borderTopWidth: 12,
+                        borderLeftColor: 'transparent',
+                        borderRightColor: 'transparent',
+                        borderTopColor: '#0d9488',
+                      }}
+                    />
+                  </View>
+                </View>
+              )}
             </View>
           </Animated.View>
-
-          {qiblaDirection !== null && (
-            <View
-              style={{
-                position: 'absolute',
-                transform: [
-                  { rotate: `${qiblaDirection - heading}deg` }
-                ],
-              }}
-            >
-              <View className="items-center" style={{ width: 50, marginTop: -(COMPASS_SIZE - 20) / 2 + 40 }}>
-                <View className="w-12 h-12 bg-teal-600 dark:bg-teal-700 rounded-full items-center justify-center shadow-lg">
-                  <Landmark size={24} color="#FFFFFF" />
-                </View>
-                <View className="w-1 h-12 bg-teal-600 dark:bg-teal-700 mt-1" />
-                <View 
-                  style={{
-                    width: 0,
-                    height: 0,
-                    backgroundColor: 'transparent',
-                    borderStyle: 'solid',
-                    borderLeftWidth: 8,
-                    borderRightWidth: 8,
-                    borderTopWidth: 12,
-                    borderLeftColor: 'transparent',
-                    borderRightColor: 'transparent',
-                    borderTopColor: '#0d9488',
-                  }}
-                />
-              </View>
-            </View>
-          )}
 
           <View className="absolute bg-white dark:bg-gray-700 w-3 h-3 rounded-full border-2 border-teal-600" />
         </View>

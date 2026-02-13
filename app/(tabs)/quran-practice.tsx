@@ -75,7 +75,7 @@ export default function TilawahScreen() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [lastHeard, setLastHeard] = useState('');
   const [isMicTestActive, setIsMicTestActive] = useState(false);
-  const [isHowToOpen, setIsHowToOpen] = useState(true);
+  const [isHowToOpen, setIsHowToOpen] = useState(false);
   
   // Refs
   const recognitionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -358,8 +358,12 @@ export default function TilawahScreen() {
     scoreTranscript(transcript);
   };
 
+  /** Quranic punctuation & diacritics (ۛ ۜ ۝ ۞ ۭ etc.) - pause markers, not spoken */
+  const QURANIC_SYMBOLS = /[\u06DB-\u06DE\u06EA-\u06ED]/g;
+
   const normalizeArabicText = (text: string): string => {
     return text
+      .replace(QURANIC_SYMBOLS, '') // Remove Quranic punctuation (not spoken)
       .replace(/[\u064B-\u065F\u0670]/g, '') // Remove harakat
       .replace(/\u0640/g, '') // Remove tatweel
       .replace(/[إأآٱا]/g, 'ا') // Normalize alif
@@ -371,6 +375,14 @@ export default function TilawahScreen() {
       .replace(/\s+/g, ' ')
       .trim()
       .toLowerCase();
+  };
+
+  /** Prepare text for practice: strip Quranic symbols and filter out punctuation-only tokens */
+  const prepareTextForPractice = (text: string): string => {
+    return text
+      .replace(QURANIC_SYMBOLS, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
   };
 
   const tokenizeArabic = (text: string): string[] => {
@@ -421,10 +433,11 @@ export default function TilawahScreen() {
     const expectedTokens = expectedWords.map((word) => normalizeArabicText(word.text));
     const spokenTokens = tokenizeArabic(normalizeArabicText(transcript));
 
+    const noSpeechDetected = !spokenTokens.length;
     const updatedWords: Word[] = expectedWords.map((word) => ({
       ...word,
       status: 'incorrect',
-      spokenText: ''
+      spokenText: noSpeechDetected ? '—' : ''
     }));
 
     if (!spokenTokens.length || !expectedTokens.length) {
@@ -496,7 +509,12 @@ export default function TilawahScreen() {
         updatedWords[idx] = {
           ...updatedWords[idx],
           status: bestScore >= getSimilarityThreshold(expectedTokens[idx].length) ? 'correct' : 'incorrect',
-          spokenText: bestToken
+          spokenText: bestToken || '—'
+        };
+      } else if (updatedWords[idx].spokenText === '') {
+        updatedWords[idx] = {
+          ...updatedWords[idx],
+          spokenText: '—'
         };
       }
     }
@@ -606,10 +624,15 @@ export default function TilawahScreen() {
       return;
     }
 
-    const wordsArray = inputText.trim().split(/\s+/).map((text, index) => ({
-      text,
-      status: 'pending' as Word['status'],
-    }));
+    const preparedText = prepareTextForPractice(inputText);
+    const wordsArray = preparedText
+      .split(/\s+/)
+      .map((text) => text.trim())
+      .filter((text) => text.length > 0)
+      .map((text) => ({
+        text,
+        status: 'pending' as Word['status'],
+      }));
 
     setWords(wordsArray);
     setProgress(0);
@@ -893,7 +916,7 @@ export default function TilawahScreen() {
                 multiline
                 className={`text-gray-900 dark:text-white min-h-12 text-right ${inputText ? 'text-4xl' : 'text-lg'}`}
                 editable={!isRecording}
-                {...(inputText ? { style: { fontFamily: getArabicFontFamily(true) } } : {})}
+                {...(inputText ? { style: { fontFamily: getArabicFontFamily(true), lineHeight: 56 } } : { style: { lineHeight: 28 } })}
               />
             </View>
             <TouchableOpacity onPress={useSampleText} disabled={isRecording}>
