@@ -2,14 +2,14 @@
   "expo": {
     "name": "Barakah Furqan",
     "slug": "barakah-furqan",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "default",
     "icon": "./assets/images/icon-barakah.png",
     "scheme": "barakahfurqan",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "buildNumber": "1",
+      "buildNumber": "2",
       "supportsTablet": true,
       "infoPlist": {
         "NSSpeechRecognitionUsageDescription": "Allow $(PRODUCT_NAME) to use speech recognition.",
@@ -19,7 +19,7 @@
       "bundleIdentifier": "com.barakah.furqan"
     },
     "android": {
-      "versionCode": 1,
+      "versionCode": 2,
       "adaptiveIcon": {
         "backgroundColor": "#059669",
         "foregroundImage": "./assets/images/icon-barakah.png"

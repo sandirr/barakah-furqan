@@ -4,6 +4,7 @@ import { updateService } from '@/services/update.service';
 import { useRouter } from 'expo-router';
 import { ChevronLeft, RefreshCw } from 'lucide-react-native';
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Alert,
@@ -14,7 +15,6 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useTranslation } from 'react-i18next';
 
 export default function AboutScreen() {
   const { t } = useTranslation();
@@ -23,7 +23,7 @@ export default function AboutScreen() {
   const [checking, setChecking] = useState(false);
 
   return (
-    <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={["top"]}>
+    <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={["top", "bottom"]}>
       <View className="flex-row items-center px-4 py-4 border-b border-gray-200 dark:border-gray-800">
         <TouchableOpacity
           onPress={() => router.back()}

@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import { ChevronRight, FileText, Globe, Heart, Info, Mail, Moon, Sun } from 'lucide-react-native';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Linking, ScrollView, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { Linking, Platform, ScrollView, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function SettingsScreen() {
@@ -16,6 +16,17 @@ export default function SettingsScreen() {
 
   const isDark = colorScheme === 'dark';
   const languageLabel = currentLanguageInfo?.nativeName ?? t('settings.language');
+
+  const openStoreForFeedback = () => {
+    if (Platform.OS === 'android') {
+      const packageName = 'com.barakah.furqan';
+      Linking.openURL(`market://details?id=${packageName}`).catch(() => {
+        Linking.openURL(`https://play.google.com/store/apps/details?id=${packageName}`);
+      });
+    } else {
+      Linking.openURL('mailto:dgirsandi@gmail.com');
+    }
+  };
 
   return (
     <SafeAreaView className='flex-1 bg-white dark:bg-gray-900' edges={["top"]}>
@@ -113,7 +124,7 @@ export default function SettingsScreen() {
               </TouchableOpacity>
 
               <TouchableOpacity
-                onPress={() => Linking.openURL('mailto:dgirsandi@gmail.com')}
+                onPress={openStoreForFeedback}
                 className="flex-row items-center justify-between px-4 py-4"
                 activeOpacity={0.7}
               >

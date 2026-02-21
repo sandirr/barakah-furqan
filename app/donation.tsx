@@ -3,9 +3,9 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useRouter } from 'expo-router';
 import { ChevronLeft, ExternalLink } from 'lucide-react-native';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Image, Linking, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useTranslation } from 'react-i18next';
 
 const DONATION_URL = 'https://checkout.xendit.co/od/barakah-furqan-donation';
 
@@ -15,7 +15,7 @@ export default function DonationScreen() {
   const router = useRouter();
 
   return (
-    <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={["top"]}>
+    <SafeAreaView className="flex-1 bg-white dark:bg-gray-900" edges={["top", "bottom"]}>
       <View className="flex-row items-center px-4 py-4 border-b border-gray-200 dark:border-gray-800">
         <TouchableOpacity
           onPress={() => router.back()}
