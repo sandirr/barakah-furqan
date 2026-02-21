@@ -436,6 +436,18 @@ export default function ShalatScreen() {
     }
   };
 
+  const testFakePrayer5Min = async () => {
+    try {
+      await notificationService.scheduleFakePrayerNotificationIn5Minutes();
+      Alert.alert(
+        t('shalat.testNotification5Min'),
+        t('shalat.testNotification5MinDesc')
+      );
+    } catch (error) {
+      Alert.alert(t('common.error'), t('shalat.notificationError'));
+    }
+  };
+
   const checkScheduledNotifications = async () => {
     try {
       const notifications = await notificationService.getScheduledNotifications();
@@ -873,15 +885,26 @@ export default function ShalatScreen() {
         )}
 
         {hasAnyNotifications && __DEV__ && (
-          <TouchableOpacity
-            onPress={testNotification}
-            className="bg-blue-100 dark:bg-blue-900 rounded-2xl p-4 flex-row items-center justify-center"
-          >
-            <Bell size={24} color="#2563eb" />
-            <Text className="text-blue-700 dark:text-blue-300 font-semibold ml-2">
-              {t('shalat.testNotification')}
-            </Text>
-          </TouchableOpacity>
+          <>
+            <TouchableOpacity
+              onPress={testNotification}
+              className="bg-blue-100 dark:bg-blue-900 rounded-2xl p-4 flex-row items-center justify-center mb-3"
+            >
+              <Bell size={24} color="#2563eb" />
+              <Text className="text-blue-700 dark:text-blue-300 font-semibold ml-2">
+                {t('shalat.testNotification')}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={testFakePrayer5Min}
+              className="bg-amber-100 dark:bg-amber-900 rounded-2xl p-4 flex-row items-center justify-center"
+            >
+              <Bell size={24} color="#d97706" />
+              <Text className="text-amber-700 dark:text-amber-300 font-semibold ml-2">
+                {t('shalat.testNotification5Min')}
+              </Text>
+            </TouchableOpacity>
+          </>
         )}
       </ScrollView>
     </SafeAreaView>

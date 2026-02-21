@@ -127,7 +127,7 @@ class NotificationService {
         identifier: `prayer_${identifier}`,
       });
 
-      // console.log(`Scheduled ${prayerName} notification at ${prayerTime} with ID: ${notificationId}`);
+      console.log(`Scheduled ${prayerName} notification at ${prayerTime} with ID: ${notificationId}`);
     } catch (error) {
       console.error(`Failed to schedule ${prayerName} notification:`, error);
     }
@@ -223,6 +223,33 @@ class NotificationService {
       // console.log('Test notification scheduled in 2 seconds');
     } catch (error) {
       console.error('Failed to schedule test notification:', error);
+      throw error;
+    }
+  }
+
+  /** Jadwalkan notifikasi sholat palsu dengan suara adzan dalam 5 menit (untuk tes: tutup app, cek apakah adzan berbunyi) */
+  async scheduleFakePrayerNotificationIn5Minutes(): Promise<void> {
+    try {
+      await this.ensureNotificationChannels();
+      const prayerName = i18n.t('shalat.fajr');
+      const content = {
+        title: i18n.t('shalat.notificationTitle', { prayer: prayerName }),
+        body: i18n.t('shalat.notificationBody', { prayer: prayerName }),
+        data: { prayerName, identifier: 'prayer_fake_5min', type: 'prayer' },
+        sound: 'adzan.mp3',
+        channelId: 'prayer',
+      } as Notifications.NotificationContentInput & { channelId: string };
+
+      await Notifications.scheduleNotificationAsync({
+        content,
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+          seconds: 60,
+        },
+        identifier: 'prayer_fake_5min',
+      });
+    } catch (error) {
+      console.error('Failed to schedule fake prayer notification:', error);
       throw error;
     }
   }

@@ -189,7 +189,9 @@
     "noInternet": "Tidak ada koneksi internet",
     "adhanError": "Gagal memutar adzan",
     "notificationError": "Gagal mengirim notifikasi test",
-    "testNotificationDesc": "Notifikasi test akan muncul dalam 2 detik!"
+    "testNotificationDesc": "Notifikasi test akan muncul dalam 2 detik!",
+    "testNotification5Min": "Tes Notifikasi Sholat (1 menit)",
+    "testNotification5MinDesc": "Notifikasi dengan suara adzan akan muncul dalam 1 menit. Tutup app untuk cek apakah adzan berbunyi saat notifikasi muncul."
   },
   "tilawah": {
     "title": "Tilawah",

@@ -189,7 +189,9 @@
     "noInternet": "No internet connection",
     "adhanError": "Failed to play adhan",
     "notificationError": "Failed to send test notification",
-    "testNotificationDesc": "Test notification will appear in 2 seconds!"
+    "testNotificationDesc": "Test notification will appear in 2 seconds!",
+    "testNotification5Min": "Test Prayer Notification (1 min)",
+    "testNotification5MinDesc": "Notification with adhan sound will appear in 1 minute. Close the app to check if adhan plays when notification appears."
   },
   "tilawah": {
     "title": "Recitation",
